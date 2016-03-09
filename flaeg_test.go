@@ -1,0 +1,89 @@
+package main
+
+import (
+	"fmt"
+	"reflect"
+	"testing"
+	"time"
+)
+
+//example of complex Struct
+type ownerInfo struct {
+	Name         string    `long:"owner.name" description:"overwrite owner name"`
+	Organization string    `long:"owner.org" description:"overwrite owner organisation"`
+	Bio          string    `long:"owner.bio" description:"overwrite owner biography"`
+	Dob          time.Time `long:"owner.dob" description:"overwrite owner date of birth"`
+}
+type databaseInfo struct {
+	Server        string `long:"database.srv" description:"overwrite database server ip address"`
+	ConnectionMax int    `long:"database.comax" description:"overwrite maximum number of connection on the database"`
+	Enable        bool   `long:"database.ena" description:"overwrite database enable"`
+}
+type serverInfo struct {
+	IP string `long:"servers.ip" description:"overwrite server ip address"`
+	Dc string `long:"servers.dc" description:"overwrite server domain controller"`
+}
+type clientInfo struct {
+	Data  [][]interface{} `long:"clients.data" description:"overwrite clients data"`
+	Hosts []string        `long:"clients.hosts" description:"overwrite clients host names"`
+}
+type example struct {
+	Title    string                `short:"t" description:"overwrite title"`
+	Owner    ownerInfo             `group:"Owner info"`
+	Database databaseInfo          `group:"Database info"`
+	Servers  map[string]serverInfo `group:"Servers" description:"overwrite servers info --servers.[ip|dc] [srv name]: value"`
+	Clients  *clientInfo           `group:"Clients"`
+}
+
+//Test function ReflectRecursive
+func TestReflectRecursive(t *testing.T) {
+	//Test slice, string
+	tabStr := []string{"un", "deux", "trois"}
+	ReflectRecursive(reflect.ValueOf(tabStr))
+
+	//Test struct, slice, string
+	var cl1 clientInfo
+	cl1.Hosts = []string{"un", "deux", "trois"}
+	ReflectRecursive(reflect.ValueOf(cl1))
+
+	//Test map, struct , string
+	var srv1 map[string]serverInfo
+	srv1 = make(map[string]serverInfo)
+	srv1["first"] = serverInfo{"192.168.2.2", "smth"}
+	ReflectRecursive(reflect.ValueOf(srv1))
+
+	//Test all
+	var ex1 example
+	ex1.init()
+	fmt.Printf("%+v\n", ex1)
+	ReflectRecursive(reflect.ValueOf(ex1))
+
+}
+
+func TestReadTagsRecursive(t *testing.T) {
+	//Test struct, slice, string
+	fmt.Println("--------------Test struct, slice, string--------------------")
+	var cl1 clientInfo
+	cl1.Hosts = []string{"un", "deux", "trois"}
+	ReadTagsRecursive(reflect.TypeOf(cl1))
+
+	//Test all
+	fmt.Println("------------------Test all------------------------------------")
+	var ex1 example
+	ex1.init()
+	ReadTagsRecursive(reflect.TypeOf(ex1))
+}
+
+//Init structs
+func (ex *example) init() {
+	ex.Title = "myTitle"
+	ex.Owner.Name = "myName"
+	ex.Owner.Organization = "myOrg"
+	ex.Owner.Dob = time.Now()
+	ex.Database.Server = "192.168.1.2"
+	ex.Database.ConnectionMax = 5000
+	ex.Database.Enable = true
+	ex.Servers = make(map[string]serverInfo)
+	ex.Servers["first"] = serverInfo{"192.168.2.2", "smth"}
+	//ex.Clients->Hosts[0] = "one"
+}
