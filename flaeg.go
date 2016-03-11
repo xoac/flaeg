@@ -50,74 +50,28 @@ func ReadTagsRecursive(objType reflect.Type) {
 }
 
 //GetTagsRecursive : Recursive function which link in a maps 'short' and 'long' tags with there value
-func GetTagsRecursive(objType reflect.Value) (tagsmap map[string]reflect.Value) {
-	tagsmap = make(map[string]reflect.Value)
-	if objType.Kind() == reflect.Struct {
+func GetTagsRecursive(objType reflect.Value, tagsmap map[string]reflect.Value) {
+	fmt.Printf("Kind %s\n", objType.Kind().String())
+
+	switch objType.Kind() {
+	case reflect.Struct:
+		fmt.Printf("Struct : %s %+v\n", objType.Kind().String(), objType)
 		for i := 0; i < objType.NumField(); i++ {
-			// fmt.Printf("Kind %s\n", objType.Field(i).Kind().String())
 			if tag := objType.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
 				tagsmap["-"+tag] = objType.Field(i)
 			}
 			if tag := objType.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
 				tagsmap["--"+tag] = objType.Field(i)
 			}
-
-			switch objType.Field(i).Kind() {
-			case reflect.Struct:
-				for k, v := range GetTagsRecursive(objType.Field(i)) {
-					tagsmap[k] = v
-				}
-			case reflect.Map:
-				for _, key := range objType.Field(i).MapKeys() {
-					for k, v := range GetTagsRecursive(objType.Field(i).MapIndex(key)) {
-						tagsmap[k] = v
-					}
-				}
-			case reflect.Slice:
-				fmt.Printf("Slice : %+v\n", objType.Field(i))
-				if objType.Field(i).Len() > 0 {
-					for j := 0; j < objType.Field(i).Len(); j++ {
-
-						for k, v := range GetTagsRecursive(objType.Field(i).Index(j)) {
-							tagsmap[k] = v
-						}
-					}
-				} else {
-					typ := objType.Field(i).Type().Elem()
-					inst := reflect.New(typ)
-					for k, v := range GetTagsRecursive(inst.Elem()) {
-						tagsmap[k] = v
-					}
-				}
-
-			case reflect.Interface:
-				for k, v := range GetTagsRecursive(objType.Field(i)) {
-					tagsmap[k] = v
-				}
-			case reflect.Ptr:
-				val := objType.Field(i).Elem()
-				if !val.IsValid() {
-					//fmt.Printf("%+v : IS NOT VALID\n", objType.Field(i))
-					typ := objType.Field(i).Type().Elem()
-					inst := reflect.New(typ)
-					// fmt.Printf("%+v\n", inst.Elem())
-					// fmt.Printf("%s\n", inst.Elem().Kind())
-					// for k, v := range GetTagsRecursive(reflect.ValueOf(inst.Elem().Interface())) {
-					for k, v := range GetTagsRecursive(inst.Elem()) {
-						tagsmap[k] = v
-					}
-				} else {
-					for k, v := range GetTagsRecursive(val) {
-						tagsmap[k] = v
-					}
-				}
-			}
+			GetTagsRecursive(objType.Field(i), tagsmap)
 		}
-
-	} else {
-		log.Printf("sorry but %s is not a %s : ", objType.Kind().String(), reflect.Struct.String())
+	case reflect.Array, reflect.Map, reflect.Slice, reflect.Ptr:
+		fmt.Printf("Complexe : %s %+v\n", objType.Kind().String(), objType)
+		typ := objType.Type().Elem()
+		inst := reflect.New(typ).Elem()
+		GetTagsRecursive(inst, tagsmap)
+	default:
+		fmt.Printf("Default : %s %+v\n", objType.Kind().String(), objType)
 		return
-
 	}
-	return
 }
