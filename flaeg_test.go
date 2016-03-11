@@ -33,6 +33,7 @@ type example struct {
 	Database databaseInfo          `group:"Database info"`
 	Servers  map[string]serverInfo `group:"Servers" description:"overwrite servers info --servers.[ip|dc] [srv name]: value"`
 	Clients  *clientInfo           `group:"Clients"`
+	Pouet    interface{}           `short:"z" description:"pouet"`
 }
 
 //Test function ReflectRecursive
@@ -96,7 +97,9 @@ func TestGetTagsRecursive(t *testing.T) {
 	// 	fmt.Println("------------------Test all------------------------------------")
 	var ex1 example
 	// 	ex1.init()
-	fmt.Println(GetTagsRecursive(reflect.ValueOf(ex1)))
+	tagsmap := make(map[string]reflect.Value)
+	GetTagsRecursive(reflect.ValueOf(ex1), tagsmap)
+	fmt.Println(tagsmap)
 }
 
 //Init structs
