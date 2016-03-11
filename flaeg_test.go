@@ -97,9 +97,9 @@ func TestGetTagsRecursive(t *testing.T) {
 	// 	fmt.Println("------------------Test all------------------------------------")
 	var ex1 example
 	// 	ex1.init()
-	tagsmap := make(map[string]reflect.Value)
+	tagsmap := make(map[string]reflect.Type)
 	GetTagsRecursive(reflect.ValueOf(ex1), tagsmap)
-	fmt.Println(tagsmap)
+	fmt.Printf("%+v\n", tagsmap)
 }
 
 //Init structs

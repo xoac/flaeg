@@ -50,28 +50,23 @@ func ReadTagsRecursive(objType reflect.Type) {
 }
 
 //GetTagsRecursive : Recursive function which link in a maps 'short' and 'long' tags with there value
-func GetTagsRecursive(objType reflect.Value, tagsmap map[string]reflect.Value) {
-	fmt.Printf("Kind %s\n", objType.Kind().String())
-
+func GetTagsRecursive(objType reflect.Value, tagsmap map[string]reflect.Type) {
 	switch objType.Kind() {
 	case reflect.Struct:
-		fmt.Printf("Struct : %s %+v\n", objType.Kind().String(), objType)
 		for i := 0; i < objType.NumField(); i++ {
 			if tag := objType.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
-				tagsmap["-"+tag] = objType.Field(i)
+				tagsmap["-"+tag] = objType.Field(i).Type()
 			}
 			if tag := objType.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
-				tagsmap["--"+tag] = objType.Field(i)
+				tagsmap["--"+tag] = objType.Field(i).Type()
 			}
 			GetTagsRecursive(objType.Field(i), tagsmap)
 		}
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.Ptr:
-		fmt.Printf("Complexe : %s %+v\n", objType.Kind().String(), objType)
 		typ := objType.Type().Elem()
 		inst := reflect.New(typ).Elem()
 		GetTagsRecursive(inst, tagsmap)
 	default:
-		fmt.Printf("Default : %s %+v\n", objType.Kind().String(), objType)
 		return
 	}
 }
