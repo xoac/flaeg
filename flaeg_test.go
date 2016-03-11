@@ -25,7 +25,7 @@ type serverInfo struct {
 }
 type clientInfo struct {
 	Data  [][]interface{} `long:"clients.data" description:"overwrite clients data"`
-	Hosts []string        `long:"clients.hosts" description:"overwrite clients host names"`
+	Hosts []serverInfo    `group:"clients.hosts" description:"overwrite clients host names"`
 }
 type example struct {
 	Title    string                `short:"t" description:"overwrite title"`
@@ -38,25 +38,25 @@ type example struct {
 //Test function ReflectRecursive
 func TestReflectRecursive(t *testing.T) {
 	//Test slice, string
-	tabStr := []string{"un", "deux", "trois"}
-	ReflectRecursive(reflect.ValueOf(tabStr))
+	// tabStr := []string{"un", "deux", "trois"}
+	// ReflectRecursive(reflect.ValueOf(tabStr))
 
-	//Test struct, slice, string
-	var cl1 clientInfo
-	cl1.Hosts = []string{"un", "deux", "trois"}
-	ReflectRecursive(reflect.ValueOf(cl1))
+	// //Test struct, slice, string
+	// var cl1 clientInfo
+	// cl1.Hosts = []string{"un", "deux", "trois"}
+	// ReflectRecursive(reflect.ValueOf(cl1))
 
-	//Test map, struct , string
-	var srv1 map[string]serverInfo
-	srv1 = make(map[string]serverInfo)
-	srv1["first"] = serverInfo{"192.168.2.2", "smth"}
-	ReflectRecursive(reflect.ValueOf(srv1))
+	// //Test map, struct , string
+	// var srv1 map[string]serverInfo
+	// srv1 = make(map[string]serverInfo)
+	// srv1["first"] = serverInfo{"192.168.2.2", "smth"}
+	// ReflectRecursive(reflect.ValueOf(srv1))
 
 	//Test all
-	var ex1 example
-	ex1.init()
-	fmt.Printf("%+v\n", ex1)
-	ReflectRecursive(reflect.ValueOf(ex1))
+	// var ex1 example
+	// ex1.init()
+	// fmt.Printf("%+v\n", ex1)
+	// ReflectRecursive(reflect.ValueOf(ex1))
 
 }
 
@@ -64,7 +64,7 @@ func TestReadTagsRecursive(t *testing.T) {
 	//Test struct, slice, string
 	fmt.Println("--------------Test struct, slice, string--------------------")
 	var cl1 clientInfo
-	cl1.Hosts = []string{"un", "deux", "trois"}
+	cl1.Hosts = []serverInfo{{"ip1", "dc1"}, {"ip2", "dc2"}}
 	ReadTagsRecursive(reflect.TypeOf(cl1))
 
 	//Test all
@@ -72,6 +72,31 @@ func TestReadTagsRecursive(t *testing.T) {
 	var ex1 example
 	ex1.init()
 	ReadTagsRecursive(reflect.TypeOf(ex1))
+}
+
+func TestGetTagsRecursive(t *testing.T) {
+	//Test struct, slice, string
+	// fmt.Println("--------------Test struct, slice, string--------------------")
+	var cl1 clientInfo
+	// var sinf1 serverInfo
+	// var sinf2 serverInfo
+	// sinf1.Dc = "dc1"
+	// sinf1.IP = "ip1"
+	// sinf2.Dc = "dc2"
+	// sinf2.IP = "ip2"
+	// cl1.Hosts = []serverInfo{sinf1, sinf2}
+	fmt.Println(GetTagsRecursive(reflect.ValueOf(cl1)))
+	// if tags := GetTagsRecursive(reflect.ValueOf(cl1)); !reflect.DeepEqual(tags["--clients.data"].Interface(), reflect.ValueOf(cl1.Data).Interface()) || !reflect.DeepEqual(tags["--clients.hosts"].Interface(), []string{"un", "deux", "trois"}) {
+	// 	fmt.Printf("%+v\n%+v\n%+v\n%+v\n", tags["--clients.data"], reflect.ValueOf(cl1.Data), tags["--clients.hosts"], reflect.ValueOf(cl1.Hosts))
+	// 	fmt.Printf("%+v\n", tags)
+	// 	t.Fail()
+	// }
+
+	//Test all
+	// 	fmt.Println("------------------Test all------------------------------------")
+	// 	var ex1 example
+	// 	ex1.init()
+	// 	fmt.Println(GetTagsRecursive(reflect.ValueOf(ex1)))
 }
 
 //Init structs
