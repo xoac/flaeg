@@ -54,7 +54,7 @@ func GetTagsRecursive(objType reflect.Value) (tagsmap map[string]reflect.Value) 
 	tagsmap = make(map[string]reflect.Value)
 	if objType.Kind() == reflect.Struct {
 		for i := 0; i < objType.NumField(); i++ {
-			fmt.Printf("Kind %s\n", objType.Field(i).Kind().String())
+			// fmt.Printf("Kind %s\n", objType.Field(i).Kind().String())
 			if tag := objType.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
 				tagsmap["-"+tag] = objType.Field(i)
 			}
@@ -74,27 +74,36 @@ func GetTagsRecursive(objType reflect.Value) (tagsmap map[string]reflect.Value) 
 					}
 				}
 			case reflect.Slice:
-				for j := 0; j < objType.Field(i).Len(); j++ {
-					fmt.Printf("Slice elem : %+v", objType.Field(i).Index(j))
-					for k, v := range GetTagsRecursive(objType.Field(i).Index(j)) {
+				fmt.Printf("Slice : %+v\n", objType.Field(i))
+				if objType.Field(i).Len() > 0 {
+					for j := 0; j < objType.Field(i).Len(); j++ {
+
+						for k, v := range GetTagsRecursive(objType.Field(i).Index(j)) {
+							tagsmap[k] = v
+						}
+					}
+				} else {
+					typ := objType.Field(i).Type().Elem()
+					inst := reflect.New(typ)
+					for k, v := range GetTagsRecursive(inst.Elem()) {
 						tagsmap[k] = v
 					}
 				}
+
 			case reflect.Interface:
-				for k, v := range GetTagsRecursive(objType.Field(i).Elem()) {
+				for k, v := range GetTagsRecursive(objType.Field(i)) {
 					tagsmap[k] = v
 				}
 			case reflect.Ptr:
 				val := objType.Field(i).Elem()
 				if !val.IsValid() {
-					fmt.Printf("%+v : IS NOT VALID\n", objType.Field(i))
+					//fmt.Printf("%+v : IS NOT VALID\n", objType.Field(i))
 					typ := objType.Field(i).Type().Elem()
 					inst := reflect.New(typ)
-					fmt.Printf("%+v\n", inst.Elem())
-					fmt.Printf("%s\n", inst.Elem().Kind())
+					// fmt.Printf("%+v\n", inst.Elem())
+					// fmt.Printf("%s\n", inst.Elem().Kind())
 					// for k, v := range GetTagsRecursive(reflect.ValueOf(inst.Elem().Interface())) {
 					for k, v := range GetTagsRecursive(inst.Elem()) {
-						fmt.Printf("%s -> %+v", k, v)
 						tagsmap[k] = v
 					}
 				} else {

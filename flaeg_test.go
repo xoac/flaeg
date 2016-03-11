@@ -9,26 +9,26 @@ import (
 
 //example of complex Struct
 type ownerInfo struct {
-	Name         string    `long:"owner.name" description:"overwrite owner name"`
-	Organization string    `long:"owner.org" description:"overwrite owner organisation"`
-	Bio          string    `long:"owner.bio" description:"overwrite owner biography"`
-	Dob          time.Time `long:"owner.dob" description:"overwrite owner date of birth"`
+	Name         string    `long:"owner.name" description:"overwrite owner name"`         //
+	Organization string    `long:"owner.org" description:"overwrite owner organisation"`  //
+	Bio          string    `long:"owner.bio" description:"overwrite owner biography"`     //
+	Dob          time.Time `long:"owner.dob" description:"overwrite owner date of birth"` //
 }
 type databaseInfo struct {
-	Server        string `long:"database.srv" description:"overwrite database server ip address"`
-	ConnectionMax int    `long:"database.comax" description:"overwrite maximum number of connection on the database"`
-	Enable        bool   `long:"database.ena" description:"overwrite database enable"`
+	Server        string `long:"database.srv" description:"overwrite database server ip address"`                     //
+	ConnectionMax int    `long:"database.comax" description:"overwrite maximum number of connection on the database"` //
+	Enable        bool   `long:"database.ena" description:"overwrite database enable"`                                //
 }
 type serverInfo struct {
-	IP string `long:"servers.ip" description:"overwrite server ip address"`
-	Dc string `long:"servers.dc" description:"overwrite server domain controller"`
+	IP string `long:"servers.ip" description:"overwrite server ip address"`        //
+	Dc string `long:"servers.dc" description:"overwrite server domain controller"` //
 }
 type clientInfo struct {
-	Data  [][]interface{} `long:"clients.data" description:"overwrite clients data"`
+	Data  [][]interface{} `long:"clients.data" description:"overwrite clients data"` //
 	Hosts []serverInfo    `group:"clients.hosts" description:"overwrite clients host names"`
 }
 type example struct {
-	Title    string                `short:"t" description:"overwrite title"`
+	Title    string                `short:"t" description:"overwrite title"` //
 	Owner    ownerInfo             `group:"Owner info"`
 	Database databaseInfo          `group:"Database info"`
 	Servers  map[string]serverInfo `group:"Servers" description:"overwrite servers info --servers.[ip|dc] [srv name]: value"`
@@ -77,7 +77,7 @@ func TestReadTagsRecursive(t *testing.T) {
 func TestGetTagsRecursive(t *testing.T) {
 	//Test struct, slice, string
 	// fmt.Println("--------------Test struct, slice, string--------------------")
-	var cl1 clientInfo
+	//var cl1 clientInfo
 	// var sinf1 serverInfo
 	// var sinf2 serverInfo
 	// sinf1.Dc = "dc1"
@@ -85,7 +85,7 @@ func TestGetTagsRecursive(t *testing.T) {
 	// sinf2.Dc = "dc2"
 	// sinf2.IP = "ip2"
 	// cl1.Hosts = []serverInfo{sinf1, sinf2}
-	fmt.Println(GetTagsRecursive(reflect.ValueOf(cl1)))
+	//fmt.Println(GetTagsRecursive(reflect.ValueOf(cl1)))
 	// if tags := GetTagsRecursive(reflect.ValueOf(cl1)); !reflect.DeepEqual(tags["--clients.data"].Interface(), reflect.ValueOf(cl1.Data).Interface()) || !reflect.DeepEqual(tags["--clients.hosts"].Interface(), []string{"un", "deux", "trois"}) {
 	// 	fmt.Printf("%+v\n%+v\n%+v\n%+v\n", tags["--clients.data"], reflect.ValueOf(cl1.Data), tags["--clients.hosts"], reflect.ValueOf(cl1.Hosts))
 	// 	fmt.Printf("%+v\n", tags)
@@ -94,9 +94,9 @@ func TestGetTagsRecursive(t *testing.T) {
 
 	//Test all
 	// 	fmt.Println("------------------Test all------------------------------------")
-	// 	var ex1 example
+	var ex1 example
 	// 	ex1.init()
-	// 	fmt.Println(GetTagsRecursive(reflect.ValueOf(ex1)))
+	fmt.Println(GetTagsRecursive(reflect.ValueOf(ex1)))
 }
 
 //Init structs
