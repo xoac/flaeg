@@ -118,16 +118,6 @@ func (ex *example) init() {
 	//ex.Clients->Hosts[0] = "one"
 }
 
-type parserString string
-
-func (p *parserString) Set(str string) error {
-	*p = parserString(str)
-	return nil
-}
-func (p *parserString) String() string {
-	return string(*p)
-}
-
 func TestParseArgs(t *testing.T) {
 	os.Args = append(os.Args, "-servers.dc=toto", "-servers.ip=tztz")
 	fmt.Printf("ARGS : %+v\n", os.Args)

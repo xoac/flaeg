@@ -50,20 +50,20 @@ func ReadTagsRecursive(objType reflect.Type) {
 }
 
 //GetTagsRecursive : Recursive function which links in a maps 'short' and 'long' tags with there value
-func GetTagsRecursive(objType reflect.Value, tagsmap map[string]reflect.Type) {
-	switch objType.Kind() {
+func GetTagsRecursive(objValue reflect.Value, tagsmap map[string]reflect.Type) {
+	switch objValue.Kind() {
 	case reflect.Struct:
-		for i := 0; i < objType.NumField(); i++ {
-			if tag := objType.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
-				tagsmap[""+tag] = objType.Field(i).Type()
+		for i := 0; i < objValue.NumField(); i++ {
+			if tag := objValue.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
+				tagsmap[""+tag] = objValue.Field(i).Type()
 			}
-			if tag := objType.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
-				tagsmap[""+tag] = objType.Field(i).Type()
+			if tag := objValue.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
+				tagsmap[""+tag] = objValue.Field(i).Type()
 			}
-			GetTagsRecursive(objType.Field(i), tagsmap)
+			GetTagsRecursive(objValue.Field(i), tagsmap)
 		}
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.Ptr:
-		typ := objType.Type().Elem()
+		typ := objValue.Type().Elem()
 		inst := reflect.New(typ).Elem()
 		GetTagsRecursive(inst, tagsmap)
 	default:
@@ -86,4 +86,19 @@ func ParseArgs(tagsmap map[string]reflect.Type, parsers map[reflect.Type]flag.Va
 		valmap[tag] = newParser
 	}
 	return valmap
+}
+
+// func FillStructRecursive(strct *interface{}, valmap[string]interface{})
+//  {
+
+//  }
+
+type parserString string
+
+func (p *parserString) Set(str string) error {
+	*p = parserString(str)
+	return nil
+}
+func (p *parserString) String() string {
+	return string(*p)
 }
