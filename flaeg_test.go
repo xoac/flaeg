@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -114,4 +116,29 @@ func (ex *example) init() {
 	ex.Servers = make(map[string]serverInfo)
 	ex.Servers["first"] = serverInfo{"192.168.2.2", "smth"}
 	//ex.Clients->Hosts[0] = "one"
+}
+
+type parserString string
+
+func (p *parserString) Set(str string) error {
+	*p = parserString(str)
+	return nil
+}
+func (p *parserString) String() string {
+	return string(*p)
+}
+
+func TestParseArgs(t *testing.T) {
+	os.Args = append(os.Args, "-servers.dc=toto", "-servers.ip=tztz")
+	fmt.Printf("ARGS : %+v\n", os.Args)
+	var srv1 serverInfo
+	parsers := map[reflect.Type]flag.Value{}
+	var myStringParser parserString
+	parsers[reflect.TypeOf("reflect.String")] = &myStringParser
+
+	tagsmap := make(map[string]reflect.Type)
+	GetTagsRecursive(reflect.ValueOf(srv1), tagsmap)
+	pargs := ParseArgs(tagsmap, parsers)
+
+	fmt.Printf("parsers : %+v\n", pargs)
 }

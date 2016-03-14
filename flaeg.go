@@ -1,13 +1,13 @@
 package main
 
 import (
-	// "flag"
+	"flag"
 	"fmt"
 	"log"
 	"reflect"
 )
 
-// ReflectRecursive : Recursive function which browse inside any kind of reflect.Value
+// ReflectRecursive : Recursive function which browses inside any kind of reflect.Value
 func ReflectRecursive(original reflect.Value) {
 	fmt.Println("kind : " + original.Kind().String())
 	switch original.Kind() {
@@ -31,7 +31,7 @@ func ReflectRecursive(original reflect.Value) {
 	}
 }
 
-//ReadTagsRecursive : Recursive function which browse inside a struct and read some struct tags
+//ReadTagsRecursive : Recursive function which browses inside a struct and read some struct tags
 func ReadTagsRecursive(objType reflect.Type) {
 	if objType.Kind() == reflect.Struct {
 		for i := 0; i < objType.NumField(); i++ {
@@ -49,16 +49,16 @@ func ReadTagsRecursive(objType reflect.Type) {
 	}
 }
 
-//GetTagsRecursive : Recursive function which link in a maps 'short' and 'long' tags with there value
+//GetTagsRecursive : Recursive function which links in a maps 'short' and 'long' tags with there value
 func GetTagsRecursive(objType reflect.Value, tagsmap map[string]reflect.Type) {
 	switch objType.Kind() {
 	case reflect.Struct:
 		for i := 0; i < objType.NumField(); i++ {
 			if tag := objType.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
-				tagsmap["-"+tag] = objType.Field(i).Type()
+				tagsmap[""+tag] = objType.Field(i).Type()
 			}
 			if tag := objType.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
-				tagsmap["--"+tag] = objType.Field(i).Type()
+				tagsmap[""+tag] = objType.Field(i).Type()
 			}
 			GetTagsRecursive(objType.Field(i), tagsmap)
 		}
@@ -69,4 +69,21 @@ func GetTagsRecursive(objType reflect.Value, tagsmap map[string]reflect.Type) {
 	default:
 		return
 	}
+}
+
+//ParseArgs : parses args into value, stored in map[tag]object
+func ParseArgs(tagsmap map[string]reflect.Type, parsers map[reflect.Type]flag.Value) map[string]interface{} {
+	newParsers := map[string]flag.Value{}
+	valmap := make(map[string]interface{})
+	for tag, rType := range tagsmap {
+		newparser := reflect.New(reflect.TypeOf(parsers[rType]).Elem()).Interface().(flag.Value)
+		fmt.Println(newparser)
+		flag.Var(newparser, tag, "help")
+		newParsers[tag] = newparser
+	}
+	flag.Parse()
+	for tag, newParser := range newParsers {
+		valmap[tag] = newParser
+	}
+	return valmap
 }
