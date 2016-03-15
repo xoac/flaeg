@@ -7,6 +7,7 @@ import (
 	"reflect"
 )
 
+/* used as example
 // ReflectRecursive : Recursive function which browses inside any kind of reflect.Value
 func ReflectRecursive(original reflect.Value) {
 	fmt.Println("kind : " + original.Kind().String())
@@ -48,6 +49,7 @@ func ReadTagsRecursive(objType reflect.Type) {
 		log.Fatal("sorry but %s is not a %s : ", objType.Kind().String(), reflect.Struct.String())
 	}
 }
+*/
 
 //GetTagsRecursive : Recursive function which links in a maps 'short' and 'long' tags with there value
 func GetTagsRecursive(objValue reflect.Value, tagsmap map[string]reflect.Type) {
@@ -55,10 +57,10 @@ func GetTagsRecursive(objValue reflect.Value, tagsmap map[string]reflect.Type) {
 	case reflect.Struct:
 		for i := 0; i < objValue.NumField(); i++ {
 			if tag := objValue.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
-				tagsmap[""+tag] = objValue.Field(i).Type()
+				tagsmap[tag] = objValue.Field(i).Type()
 			}
 			if tag := objValue.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
-				tagsmap[""+tag] = objValue.Field(i).Type()
+				tagsmap[tag] = objValue.Field(i).Type()
 			}
 			GetTagsRecursive(objValue.Field(i), tagsmap)
 		}
@@ -72,33 +74,58 @@ func GetTagsRecursive(objValue reflect.Value, tagsmap map[string]reflect.Type) {
 }
 
 //ParseArgs : parses args into value, stored in map[tag]object
-func ParseArgs(tagsmap map[string]reflect.Type, parsers map[reflect.Type]flag.Value) map[string]interface{} {
+func ParseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[reflect.Type]flag.Value) map[string]interface{} {
 	newParsers := map[string]flag.Value{}
+	flagSet := flag.NewFlagSet("flaeg.ParseArgs", flag.ExitOnError)
 	valmap := make(map[string]interface{})
 	for tag, rType := range tagsmap {
 		newparser := reflect.New(reflect.TypeOf(parsers[rType]).Elem()).Interface().(flag.Value)
 		fmt.Println(newparser)
-		flag.Var(newparser, tag, "help")
+		flagSet.Var(newparser, tag, "help")
 		newParsers[tag] = newparser
 	}
-	flag.Parse()
+	flagSet.Parse(args)
 	for tag, newParser := range newParsers {
 		valmap[tag] = newParser
 	}
 	return valmap
 }
 
-// func FillStructRecursive(strct *interface{}, valmap[string]interface{})
-//  {
+//FillStructRecursive : uses ParseArgs to recursively initialize an instance of Struct
+func FillStructRecursive(objValue reflect.Value, valmap map[string]interface{}) {
+	fmt.Println("kind : " + objValue.Kind().String())
+	switch objValue.Kind() {
+	case reflect.Ptr:
+		typ := objValue.Type().Elem()
+		inst := reflect.New(typ).Elem()
+		switch inst.Kind() {
+		case reflect.Struct:
+			for i := 0; i < inst.NumField(); i++ {
+				//TODO if short
+				if tag := inst.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
+					println("TODO : tag : short")
+				}
+				if tag := inst.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
+					for tag2, val := range valmap {
+						if tag == tag2 {
+							fmt.Printf("field %d in the struct is kind of : %s\n", i, objValue.Elem().Field(i).Kind().String())
+							if objValue.Elem().Field(i).CanSet() {
+								fmt.Printf("will put %s (a kind of : %s) into this field\n", val, reflect.ValueOf(val).Elem().Kind().String())
+								objValue.Elem().Field(i).Set(reflect.ValueOf(val).Elem().Convert(objValue.Elem().Field(i).Type()))
+								fmt.Printf("dfyj %+v\n", objValue.Elem().Field(i))
+							} else {
+								log.Fatal("sorry but the type %s is not a settable ...\n", objValue.Elem().Type)
+							}
+						}
+					}
+				}
+				//recursion
+				//FillStructRecursive(objValue.Elem().Field(i), valmap)
+			}
+		default:
+			println("TODO ptr on no struct")
+		}
 
-//  }
+	}
 
-type parserString string
-
-func (p *parserString) Set(str string) error {
-	*p = parserString(str)
-	return nil
-}
-func (p *parserString) String() string {
-	return string(*p)
 }

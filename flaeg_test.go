@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"reflect"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -26,8 +27,8 @@ type serverInfo struct {
 	Dc string `long:"servers.dc" description:"overwrite server domain controller"` //
 }
 type clientInfo struct {
-	Data  [][]interface{} `long:"clients.data" description:"overwrite clients data"` //
-	Hosts []serverInfo    `group:"clients.hosts" description:"overwrite clients host names"`
+	Data  []int        `long:"clients.data" description:"overwrite clients data"` //
+	Hosts []serverInfo `group:"clients.hosts" description:"overwrite clients host names"`
 }
 type example struct {
 	Title    string                `short:"t" description:"overwrite title"` //
@@ -35,10 +36,9 @@ type example struct {
 	Database databaseInfo          `group:"Database info"`
 	Servers  map[string]serverInfo `group:"Servers" description:"overwrite servers info --servers.[ip|dc] [srv name]: value"`
 	Clients  *clientInfo           `group:"Clients"`
-	Pouet    interface{}           `short:"z" description:"pouet"`
 }
 
-//Test function ReflectRecursive
+/*//Test function ReflectRecursive
 func TestReflectRecursive(t *testing.T) {
 	//Test slice, string
 	// tabStr := []string{"un", "deux", "trois"}
@@ -77,33 +77,6 @@ func TestReadTagsRecursive(t *testing.T) {
 	ReadTagsRecursive(reflect.TypeOf(ex1))
 }
 
-func TestGetTagsRecursive(t *testing.T) {
-	//Test struct, slice, string
-	// fmt.Println("--------------Test struct, slice, string--------------------")
-	//var cl1 clientInfo
-	// var sinf1 serverInfo
-	// var sinf2 serverInfo
-	// sinf1.Dc = "dc1"
-	// sinf1.IP = "ip1"
-	// sinf2.Dc = "dc2"
-	// sinf2.IP = "ip2"
-	// cl1.Hosts = []serverInfo{sinf1, sinf2}
-	//fmt.Println(GetTagsRecursive(reflect.ValueOf(cl1)))
-	// if tags := GetTagsRecursive(reflect.ValueOf(cl1)); !reflect.DeepEqual(tags["--clients.data"].Interface(), reflect.ValueOf(cl1.Data).Interface()) || !reflect.DeepEqual(tags["--clients.hosts"].Interface(), []string{"un", "deux", "trois"}) {
-	// 	fmt.Printf("%+v\n%+v\n%+v\n%+v\n", tags["--clients.data"], reflect.ValueOf(cl1.Data), tags["--clients.hosts"], reflect.ValueOf(cl1.Hosts))
-	// 	fmt.Printf("%+v\n", tags)
-	// 	t.Fail()
-	// }
-
-	//Test all
-	// 	fmt.Println("------------------Test all------------------------------------")
-	var ex1 example
-	// 	ex1.init()
-	tagsmap := make(map[string]reflect.Type)
-	GetTagsRecursive(reflect.ValueOf(ex1), tagsmap)
-	fmt.Printf("%+v\n", tagsmap)
-}
-
 //Init structs
 func (ex *example) init() {
 	ex.Title = "myTitle"
@@ -117,18 +90,92 @@ func (ex *example) init() {
 	ex.Servers["first"] = serverInfo{"192.168.2.2", "smth"}
 	//ex.Clients->Hosts[0] = "one"
 }
+*/
+
+func TestGetTagsRecursive(t *testing.T) {
+	//Test all
+	var ex1 example
+	tagsmap := make(map[string]reflect.Type)
+	GetTagsRecursive(reflect.ValueOf(ex1), tagsmap)
+
+	checkType := map[string]reflect.Type{
+		"owner.org":      reflect.TypeOf(""),
+		"database.ena":   reflect.TypeOf(true),
+		"owner.bio":      reflect.TypeOf(""),
+		"database.comax": reflect.TypeOf(1),
+		"database.srv":   reflect.TypeOf(""),
+		"servers.ip":     reflect.TypeOf(""),
+		"owner.name":     reflect.TypeOf(""),
+		"servers.dc":     reflect.TypeOf(""),
+		"clients.data":   reflect.TypeOf([]int{}),
+		"t":              reflect.TypeOf(""),
+		"owner.dob":      reflect.TypeOf(time.Now()),
+	}
+	fmt.Printf("%+v\n", checkType)
+	for tag, tagType := range tagsmap {
+		if checkType[tag] != tagType {
+			t.Fatalf("Type %s (of tag : %s) doesn't match with %s\n", tagType, tag, checkType[tag])
+		}
+	}
+
+}
+
+// -- custom Value
+type customValue []int
+
+func bracket(r rune) bool {
+	return r == '{' || r == '}' || r == ',' || r == ';'
+}
+func (c *customValue) Set(s string) error {
+	tabStr := strings.FieldsFunc(s, bracket)
+	for _, str := range tabStr {
+		v, err := strconv.Atoi(str)
+		if err != nil {
+			return err
+		}
+		*c = append(*c, v)
+	}
+	return nil
+}
+
+func (c *customValue) String() string { return fmt.Sprintf("%v", *c) }
 
 func TestParseArgs(t *testing.T) {
-	os.Args = append(os.Args, "-servers.dc=toto", "-servers.ip=tztz")
-	fmt.Printf("ARGS : %+v\n", os.Args)
+	parsers := map[reflect.Type]flag.Value{}
+	var myStringParser stringValue
+	var myBoolParser boolValue
+	var myIntParser intValue
+	var myCustomParser customValue
+	var myTimeParser timeValue
+	parsers[reflect.TypeOf("")] = &myStringParser
+	parsers[reflect.TypeOf(true)] = &myBoolParser
+	parsers[reflect.TypeOf(1)] = &myIntParser
+	parsers[reflect.TypeOf([]int{})] = &myCustomParser
+	parsers[reflect.TypeOf(true)] = &myTimeParser
+
+	//Test all
+	//fail !
+	var ex1 serverInfo
+	tagsmap := make(map[string]reflect.Type)
+	GetTagsRecursive(reflect.ValueOf(ex1), tagsmap)
+	pargs := ParseArgs([]string{"servers.dc=toto"}, tagsmap, parsers)
+
+	fmt.Printf("parsers : %+v\n", pargs)
+}
+
+func TestFillStructRecursive(t *testing.T) {
 	var srv1 serverInfo
 	parsers := map[reflect.Type]flag.Value{}
-	var myStringParser parserString
-	parsers[reflect.TypeOf("reflect.String")] = &myStringParser
+	var myStringParser stringValue
+	parsers[reflect.TypeOf("")] = &myStringParser
 
 	tagsmap := make(map[string]reflect.Type)
 	GetTagsRecursive(reflect.ValueOf(srv1), tagsmap)
-	pargs := ParseArgs(tagsmap, parsers)
+	pargs := ParseArgs([]string{"servers.dc=toto", "servers.ip=tztz"}, tagsmap, parsers)
+	FillStructRecursive(reflect.ValueOf(&srv1), pargs)
+	fmt.Printf("%+v\n", srv1)
+	//rValue := FillStructRecursive(reflect.ValueOf(&srv1), pargs)
+	// srv2 := reflect.New(reflect.TypeOf(rValue).Elem()).Interface().(serverInfo)
+	// fmt.Println(srv2)
 
-	fmt.Printf("parsers : %+v\n", pargs)
 }
