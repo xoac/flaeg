@@ -140,6 +140,7 @@ func (c *customValue) Set(s string) error {
 func (c *customValue) String() string { return fmt.Sprintf("%v", *c) }
 
 func TestParseArgs(t *testing.T) {
+	//creating parsers
 	parsers := map[reflect.Type]flag.Value{}
 	var myStringParser stringValue
 	var myBoolParser boolValue
@@ -153,16 +154,48 @@ func TestParseArgs(t *testing.T) {
 	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
 
 	//Test all
-	//fail !
 	var ex1 example
 	tagsmap := make(map[string]reflect.Type)
-
 	GetTagsRecursive(reflect.ValueOf(ex1), tagsmap)
 	fmt.Println(tagsmap)
-
-	pargs := ParseArgs([]string{"servers.dc=toto", ""}, tagsmap, parsers)
-
+	args := []string{
+		"-owner.org", "org",
+		"-database.ena", //or +"=true"
+		"-owner.bio", "bio",
+		"-database.comax", "123",
+		"-database.srv", "srv",
+		"-servers.ip", "ip",
+		"-owner.name", "name",
+		"-servers.dc", "dc",
+		"-clients.data", "{1,2,3,4}",
+		"-t", "title",
+		"-owner.dob", "1979-05-27T07:32:00Z",
+	}
+	pargs := ParseArgs(args, tagsmap, parsers)
 	fmt.Printf("parsers : %+v\n", pargs)
+
+	//CHECK
+	myTime, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
+	checkParse := map[string]interface{}{
+		"owner.org":      stringValue("org"),
+		"database.ena":   boolValue(true),
+		"owner.bio":      stringValue("bio"),
+		"database.comax": intValue(123),
+		"database.srv":   stringValue("srv"),
+		"servers.ip":     stringValue("ip"),
+		"owner.name":     stringValue("name"),
+		"servers.dc":     stringValue("dc"),
+		"clients.data":   customValue([]int{1, 2, 3, 4}),
+		"t":              stringValue("title"),
+		"owner.dob":      timeValue(myTime),
+	}
+	for tag, inter := range pargs {
+		v1 := reflect.ValueOf(checkParse[tag]).Interface()
+		v2 := reflect.ValueOf(inter).Elem().Interface()
+		if !reflect.DeepEqual(v1, v2) {
+			t.Fatalf("Error tag %s : expected %+v got %+v", tag, v1, v2)
+		}
+	}
 }
 
 func TestFillStructRecursive(t *testing.T) {

@@ -73,7 +73,8 @@ func GetTagsRecursive(objValue reflect.Value, tagsmap map[string]reflect.Type) {
 	}
 }
 
-//ParseArgs : parses args into value, stored in map[tag]object
+//ParseArgs : parses args into a map[tag]value, using map[type]parser
+//args must be formated as like as flag documentation. See https://golang.org/pkg/flag
 func ParseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[reflect.Type]flag.Value) map[string]interface{} {
 	//Check if all reflect.Type from tagsmap are in parsers
 	for tag, rType := range tagsmap {
