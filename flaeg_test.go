@@ -111,7 +111,6 @@ func TestGetTagsRecursive(t *testing.T) {
 		"t":              reflect.TypeOf(""),
 		"owner.dob":      reflect.TypeOf(time.Now()),
 	}
-	fmt.Printf("%+v\n", checkType)
 	for tag, tagType := range tagsmap {
 		if checkType[tag] != tagType {
 			t.Fatalf("Type %s (of tag : %s) doesn't match with %s\n", tagType, tag, checkType[tag])
@@ -151,14 +150,17 @@ func TestParseArgs(t *testing.T) {
 	parsers[reflect.TypeOf(true)] = &myBoolParser
 	parsers[reflect.TypeOf(1)] = &myIntParser
 	parsers[reflect.TypeOf([]int{})] = &myCustomParser
-	parsers[reflect.TypeOf(true)] = &myTimeParser
+	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
 
 	//Test all
 	//fail !
-	var ex1 serverInfo
+	var ex1 example
 	tagsmap := make(map[string]reflect.Type)
+
 	GetTagsRecursive(reflect.ValueOf(ex1), tagsmap)
-	pargs := ParseArgs([]string{"servers.dc=toto"}, tagsmap, parsers)
+	fmt.Println(tagsmap)
+
+	pargs := ParseArgs([]string{"servers.dc=toto", ""}, tagsmap, parsers)
 
 	fmt.Printf("parsers : %+v\n", pargs)
 }

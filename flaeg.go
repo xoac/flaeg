@@ -75,12 +75,18 @@ func GetTagsRecursive(objValue reflect.Value, tagsmap map[string]reflect.Type) {
 
 //ParseArgs : parses args into value, stored in map[tag]object
 func ParseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[reflect.Type]flag.Value) map[string]interface{} {
+	//Check if all reflect.Type from tagsmap are in parsers
+	for tag, rType := range tagsmap {
+		if _, ok := parsers[rType]; !ok {
+			log.Fatalf("Error tag %s : Parser(flag.Value) not found for reflect.Type %s in the map parsers\n", tag, rType)
+		}
+	}
+
 	newParsers := map[string]flag.Value{}
 	flagSet := flag.NewFlagSet("flaeg.ParseArgs", flag.ExitOnError)
 	valmap := make(map[string]interface{})
 	for tag, rType := range tagsmap {
 		newparser := reflect.New(reflect.TypeOf(parsers[rType]).Elem()).Interface().(flag.Value)
-		fmt.Println(newparser)
 		flagSet.Var(newparser, tag, "help")
 		newParsers[tag] = newparser
 	}
@@ -119,7 +125,7 @@ func FillStructRecursive(objValue reflect.Value, valmap map[string]interface{}) 
 						}
 					}
 				}
-				//recursion
+				//recursion TODO
 				//FillStructRecursive(objValue.Elem().Field(i), valmap)
 			}
 		default:
