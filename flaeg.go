@@ -7,50 +7,6 @@ import (
 	"reflect"
 )
 
-/* used as example
-// ReflectRecursive : Recursive function which browses inside any kind of reflect.Value
-func ReflectRecursive(original reflect.Value) {
-	fmt.Println("kind : " + original.Kind().String())
-	switch original.Kind() {
-	case reflect.Struct:
-		for i := 0; i < original.NumField(); i++ {
-			ReflectRecursive(original.Field(i))
-		}
-	case reflect.Map:
-		for _, key := range original.MapKeys() {
-			ReflectRecursive(original.MapIndex(key))
-		}
-	case reflect.Slice:
-		for i := 0; i < original.Len(); i++ {
-			ReflectRecursive(original.Index(i))
-		}
-	case reflect.Interface:
-		ReflectRecursive(original.Elem())
-	case reflect.String:
-		f := original.Interface()
-		fmt.Println("String content : " + reflect.ValueOf(f).String())
-	}
-}
-
-//ReadTagsRecursive : Recursive function which browses inside a struct and read some struct tags
-func ReadTagsRecursive(objType reflect.Type) {
-	if objType.Kind() == reflect.Struct {
-		for i := 0; i < objType.NumField(); i++ {
-			fmt.Printf("\nVAR =%+v \n", objType.Field(i))
-			fmt.Println("group : " + objType.Field(i).Tag.Get("group"))
-			fmt.Println("short : " + objType.Field(i).Tag.Get("short"))
-			fmt.Println("long : " + objType.Field(i).Tag.Get("long"))
-			fmt.Println("description : " + objType.Field(i).Tag.Get("description"))
-			if objType.Field(i).Type.Kind() == reflect.Struct {
-				ReadTagsRecursive(objType.Field(i).Type)
-			}
-		}
-	} else {
-		log.Fatal("sorry but %s is not a %s : ", objType.Kind().String(), reflect.Struct.String())
-	}
-}
-*/
-
 //GetTagsRecursive : Recursive function which links in a maps 'short' and 'long' tags with there value
 func GetTagsRecursive(objValue reflect.Value, tagsmap map[string]reflect.Type) {
 	switch objValue.Kind() {
@@ -98,41 +54,39 @@ func ParseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[refle
 	return valmap
 }
 
-//FillStructRecursive : uses ParseArgs to recursively initialize an instance of Struct
+//FillStructRecursive initialize a value of any taged Struct given by reference
 func FillStructRecursive(objValue reflect.Value, valmap map[string]interface{}) {
-	fmt.Println("kind : " + objValue.Kind().String())
 	switch objValue.Kind() {
-	case reflect.Ptr:
-		typ := objValue.Type().Elem()
-		inst := reflect.New(typ).Elem()
-		switch inst.Kind() {
-		case reflect.Struct:
-			for i := 0; i < inst.NumField(); i++ {
-				//TODO if short
-				if tag := inst.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
-					println("TODO : tag : short")
-				}
-				if tag := inst.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
-					for tag2, val := range valmap {
-						if tag == tag2 {
-							fmt.Printf("field %d in the struct is kind of : %s\n", i, objValue.Elem().Field(i).Kind().String())
-							if objValue.Elem().Field(i).CanSet() {
-								fmt.Printf("will put %s (a kind of : %s) into this field\n", val, reflect.ValueOf(val).Elem().Kind().String())
-								objValue.Elem().Field(i).Set(reflect.ValueOf(val).Elem().Convert(objValue.Elem().Field(i).Type()))
-								fmt.Printf("dfyj %+v\n", objValue.Elem().Field(i))
-							} else {
-								log.Fatal("sorry but the type %s is not a settable ...\n", objValue.Elem().Type)
-							}
-						}
-					}
-				}
-				//recursion TODO
-				//FillStructRecursive(objValue.Elem().Field(i), valmap)
+	case reflect.Struct:
+		inst := reflect.New(objValue.Type()).Elem()
+		for i := 0; i < inst.NumField(); i++ {
+			taged := false
+			if tag := inst.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
+				taged = true
+				SetFields(objValue.Field(i), valmap, tag)
 			}
-		default:
-			println("TODO ptr on no struct")
+			if tag := inst.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
+				taged = true
+				SetFields(objValue.Field(i), valmap, tag)
+			}
+			if !taged {
+				FillStructRecursive(objValue.Field(i), valmap)
+			}
 		}
+	case reflect.Ptr, reflect.Slice, reflect.Array, reflect.Map:
+		FillStructRecursive(objValue.Elem(), valmap)
+	}
 
+}
+
+// SetFields sets value to fieldValue using tag as key in valmap
+func SetFields(fieldValue reflect.Value, valmap map[string]interface{}, tag string) {
+	if fieldValue.CanSet() {
+		if val, ok := valmap[tag]; ok {
+			fieldValue.Set(reflect.ValueOf(val).Elem().Convert(fieldValue.Type()))
+		}
+	} else {
+		log.Fatalf("Error : type %s is not a settable ...\n", fieldValue.Kind())
 	}
 
 }
