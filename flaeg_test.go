@@ -12,91 +12,37 @@ import (
 
 //example of complex Struct
 type ownerInfo struct {
-	Name         string    `long:"owner.name" description:"overwrite owner name"`         //
-	Organization string    `long:"owner.org" description:"overwrite owner organisation"`  //
-	Bio          string    `long:"owner.bio" description:"overwrite owner biography"`     //
-	Dob          time.Time `long:"owner.dob" description:"overwrite owner date of birth"` //
+	Name         string    `long:"owner.name" description:"overwrite owner name"`
+	Organization string    `long:"owner.org" description:"overwrite owner organisation"`
+	Bio          string    `long:"owner.bio" description:"overwrite owner biography"`
+	Dob          time.Time `long:"owner.dob" description:"overwrite owner date of birth"`
 }
 type databaseInfo struct {
-	Server        string `long:"database.srv" description:"overwrite database server ip address"`                     //
-	ConnectionMax int    `long:"database.comax" description:"overwrite maximum number of connection on the database"` //
-	Enable        bool   `long:"database.ena" description:"overwrite database enable"`                                //
+	Server        string `long:"database.srv" description:"overwrite database server ip address"`
+	ConnectionMax int    `long:"database.comax" description:"overwrite maximum number of connection on the database"`
+	Enable        bool   `long:"database.ena" description:"overwrite database enable"`
 }
 type serverInfo struct {
-	IP string `long:"servers.ip" description:"overwrite server ip address"`        //
-	Dc string `long:"servers.dc" description:"overwrite server domain controller"` //
+	IP string `long:"servers.ip" description:"overwrite server ip address"`
+	Dc string `long:"servers.dc" description:"overwrite server domain controller"`
 }
 type clientInfo struct {
-	Data  []int        `long:"clients.data" description:"overwrite clients data"` //
-	Hosts []serverInfo `group:"clients.hosts" description:"overwrite clients host names"`
+	Data []int `long:"clients.data" description:"overwrite clients data"`
+	// Hosts []serverInfo `group:"clients.hosts" description:"overwrite clients host names"`
 }
 type example struct {
-	Title    string                `short:"t" description:"overwrite title"` //
-	Owner    ownerInfo             `group:"Owner info"`
-	Database databaseInfo          `group:"Database info"`
-	Servers  map[string]serverInfo `group:"Servers" description:"overwrite servers info --servers.[ip|dc] [srv name]: value"`
-	Clients  *clientInfo           `group:"Clients"`
+	Title    string       `short:"t" description:"overwrite title"` //
+	Owner    ownerInfo    `group:"Owner info"`
+	Database databaseInfo `group:"Database info"`
+	Servers  serverInfo   `group:"Servers" description:"overwrite servers info --servers.[ip|dc] [srv name]: value"`
+	Clients  clientInfo   `group:"Clients"`
 }
-
-/*//Test function ReflectRecursive
-func TestReflectRecursive(t *testing.T) {
-	//Test slice, string
-	// tabStr := []string{"un", "deux", "trois"}
-	// ReflectRecursive(reflect.ValueOf(tabStr))
-
-	// //Test struct, slice, string
-	// var cl1 clientInfo
-	// cl1.Hosts = []string{"un", "deux", "trois"}
-	// ReflectRecursive(reflect.ValueOf(cl1))
-
-	// //Test map, struct , string
-	// var srv1 map[string]serverInfo
-	// srv1 = make(map[string]serverInfo)
-	// srv1["first"] = serverInfo{"192.168.2.2", "smth"}
-	// ReflectRecursive(reflect.ValueOf(srv1))
-
-	//Test all
-	// var ex1 example
-	// ex1.init()
-	// fmt.Printf("%+v\n", ex1)
-	// ReflectRecursive(reflect.ValueOf(ex1))
-
-}
-
-func TestReadTagsRecursive(t *testing.T) {
-	//Test struct, slice, string
-	fmt.Println("--------------Test struct, slice, string--------------------")
-	var cl1 clientInfo
-	cl1.Hosts = []serverInfo{{"ip1", "dc1"}, {"ip2", "dc2"}}
-	ReadTagsRecursive(reflect.TypeOf(cl1))
-
-	//Test all
-	fmt.Println("------------------Test all------------------------------------")
-	var ex1 example
-	ex1.init()
-	ReadTagsRecursive(reflect.TypeOf(ex1))
-}
-
-//Init structs
-func (ex *example) init() {
-	ex.Title = "myTitle"
-	ex.Owner.Name = "myName"
-	ex.Owner.Organization = "myOrg"
-	ex.Owner.Dob = time.Now()
-	ex.Database.Server = "192.168.1.2"
-	ex.Database.ConnectionMax = 5000
-	ex.Database.Enable = true
-	ex.Servers = make(map[string]serverInfo)
-	ex.Servers["first"] = serverInfo{"192.168.2.2", "smth"}
-	//ex.Clients->Hosts[0] = "one"
-}
-*/
 
 func TestGetTagsRecursive(t *testing.T) {
 	//Test all
 	var ex1 example
 	tagsmap := make(map[string]reflect.Type)
-	GetTagsRecursive(reflect.ValueOf(ex1), tagsmap)
+	GetTagsRecursive(reflect.ValueOf(&ex1), tagsmap)
 
 	checkType := map[string]reflect.Type{
 		"owner.org":      reflect.TypeOf(""),
@@ -157,7 +103,7 @@ func TestParseArgs(t *testing.T) {
 	var ex1 example
 	tagsmap := make(map[string]reflect.Type)
 	GetTagsRecursive(reflect.ValueOf(ex1), tagsmap)
-	fmt.Println(tagsmap)
+	// fmt.Println(tagsmap)
 	args := []string{
 		"-owner.org", "org",
 		"-database.ena", //or +"=true"
@@ -199,18 +145,54 @@ func TestParseArgs(t *testing.T) {
 }
 
 func TestFillStructRecursive(t *testing.T) {
-	var srv1 serverInfo
+
+	//creating parsers
 	parsers := map[reflect.Type]flag.Value{}
 	var myStringParser stringValue
+	var myBoolParser boolValue
+	var myIntParser intValue
+	var myCustomParser customValue
+	var myTimeParser timeValue
 	parsers[reflect.TypeOf("")] = &myStringParser
+	parsers[reflect.TypeOf(true)] = &myBoolParser
+	parsers[reflect.TypeOf(1)] = &myIntParser
+	parsers[reflect.TypeOf([]int{})] = &myCustomParser
+	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
 
+	//Test
+	var ex example
 	tagsmap := make(map[string]reflect.Type)
-	GetTagsRecursive(reflect.ValueOf(srv1), tagsmap)
-	pargs := ParseArgs([]string{"servers.dc=toto", "servers.ip=tztz"}, tagsmap, parsers)
-	FillStructRecursive(reflect.ValueOf(&srv1), pargs)
-	fmt.Printf("%+v\n", srv1)
-	//rValue := FillStructRecursive(reflect.ValueOf(&srv1), pargs)
-	// srv2 := reflect.New(reflect.TypeOf(rValue).Elem()).Interface().(serverInfo)
-	// fmt.Println(srv2)
+	GetTagsRecursive(reflect.ValueOf(ex), tagsmap)
+	args := []string{
+		"-owner.org", "org",
+		"-database.ena", //or +"=true"
+		"-owner.bio", "bio",
+		"-database.comax", "123",
+		"-database.srv", "srv",
+		"-servers.ip", "ip",
+		"-owner.name", "name",
+		"-servers.dc", "dc",
+		"-clients.data", "{1,2,3,4}",
+		"-t", "title",
+		"-owner.dob", "1979-05-27T07:32:00Z",
+	}
+	pargs := ParseArgs(args, tagsmap, parsers)
+	FillStructRecursive(reflect.ValueOf(&ex), pargs)
 
+	//CHECK
+	var check example
+	check.Title = "title"
+	check.Owner.Name = "name"
+	check.Owner.Organization = "org"
+	check.Owner.Bio = "bio"
+	check.Owner.Dob, _ = time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
+	check.Database.Server = "srv"
+	check.Database.ConnectionMax = 123
+	check.Database.Enable = true
+	check.Servers.IP = "ip"
+	check.Servers.Dc = "dc"
+	check.Clients.Data = []int{1, 2, 3, 4}
+	if !reflect.DeepEqual(ex, check) {
+		t.Fatalf("expected\t: %+v\ngot\t\t: %+v", ex, check)
+	}
 }

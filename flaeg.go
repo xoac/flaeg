@@ -73,8 +73,11 @@ func FillStructRecursive(objValue reflect.Value, valmap map[string]interface{}) 
 				FillStructRecursive(objValue.Field(i), valmap)
 			}
 		}
-	case reflect.Ptr, reflect.Slice, reflect.Array, reflect.Map:
+	case reflect.Ptr:
 		FillStructRecursive(objValue.Elem(), valmap)
+
+	case reflect.Slice, reflect.Array, reflect.Map:
+		fmt.Println("NEVER HERE ?")
 	}
 
 }
