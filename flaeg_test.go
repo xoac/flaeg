@@ -35,7 +35,7 @@ type example struct {
 	Owner    ownerInfo    `group:"Owner info"`
 	Database databaseInfo `group:"Database info"`
 	Servers  serverInfo   `group:"Servers" description:"overwrite servers info --servers.[ip|dc] [srv name]: value"`
-	Clients  clientInfo   `group:"Clients"`
+	Clients  *clientInfo  `group:"Clients"`
 }
 
 func TestGetTagsRecursive(t *testing.T) {
@@ -118,7 +118,6 @@ func TestParseArgs(t *testing.T) {
 		"-owner.dob", "1979-05-27T07:32:00Z",
 	}
 	pargs := ParseArgs(args, tagsmap, parsers)
-	fmt.Printf("parsers : %+v\n", pargs)
 
 	//CHECK
 	myTime, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
@@ -191,8 +190,8 @@ func TestFillStructRecursive(t *testing.T) {
 	check.Database.Enable = true
 	check.Servers.IP = "ip"
 	check.Servers.Dc = "dc"
-	check.Clients.Data = []int{1, 2, 3, 4}
+	check.Clients = &clientInfo{Data: []int{1, 2, 3, 4}}
 	if !reflect.DeepEqual(ex, check) {
-		t.Fatalf("expected\t: %+v\ngot\t\t: %+v", ex, check)
+		t.Fatalf("expected\t: %+v\ngot\t\t: %+v", check, ex)
 	}
 }

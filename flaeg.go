@@ -74,12 +74,17 @@ func FillStructRecursive(objValue reflect.Value, valmap map[string]interface{}) 
 			}
 		}
 	case reflect.Ptr:
-		FillStructRecursive(objValue.Elem(), valmap)
+		if objValue.IsNil() {
+			inst := reflect.New(objValue.Type().Elem())
+			FillStructRecursive(inst.Elem(), valmap)
+			objValue.Set(inst)
+		} else {
+			FillStructRecursive(objValue.Elem(), valmap)
+		}
 
 	case reflect.Slice, reflect.Array, reflect.Map:
 		fmt.Println("NEVER HERE ?")
 	}
-
 }
 
 // SetFields sets value to fieldValue using tag as key in valmap
