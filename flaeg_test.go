@@ -12,54 +12,64 @@ import (
 
 //example of complex Struct
 type ownerInfo struct {
-	Name         string    `long:"owner.name" description:"overwrite owner name"`
-	Organization string    `long:"owner.org" description:"overwrite owner organisation"`
-	Bio          string    `long:"owner.bio" description:"overwrite owner biography"`
-	Dob          time.Time `long:"owner.dob" description:"overwrite owner date of birth"`
+	Name         string    `long:"name" description:"overwrite owner name"`
+	Organization string    `long:"org" description:"overwrite owner organisation"`
+	Bio          string    `long:"bio" description:"overwrite owner biography"`
+	Dob          time.Time `long:"dob" description:"overwrite owner date of birth"`
 }
 type databaseInfo struct {
-	Server        string `long:"database.srv" description:"overwrite database server ip address"`
-	ConnectionMax int    `long:"database.comax" description:"overwrite maximum number of connection on the database"`
-	Enable        bool   `long:"database.ena" description:"overwrite database enable"`
+	Server        string `long:"srv" description:"overwrite database server ip address"`
+	ConnectionMax int    `long:"comax" description:"overwrite maximum number of connection on the database"`
+	Enable        bool   `long:"ena" description:"overwrite database enable"`
 }
 type serverInfo struct {
-	IP string `long:"servers.ip" description:"overwrite server ip address"`
-	Dc string `long:"servers.dc" description:"overwrite server domain controller"`
+	IP string `long:"ip" description:"overwrite server ip address"`
+	Dc string `long:"dc" description:"overwrite server domain controller"`
 }
 type clientInfo struct {
-	Data []int `long:"clients.data" description:"overwrite clients data"`
-	// Hosts []serverInfo `group:"clients.hosts" description:"overwrite clients host names"`
+	Data  []int        `long:"data" description:"overwrite clients data"`
+	Hosts []serverInfo `description:"overwrite clients host names"`
 }
 type example struct {
 	Title    string       `short:"t" description:"overwrite title"` //
-	Owner    ownerInfo    `group:"Owner info"`
-	Database databaseInfo `group:"Database info"`
-	Servers  serverInfo   `group:"Servers" description:"overwrite servers info --servers.[ip|dc] [srv name]: value"`
-	Clients  *clientInfo  `group:"Clients"`
+	Owner    ownerInfo    `long:"own"  description:"overwrite server ip address"`
+	Database databaseInfo ` description:"overwrite server ip address"`
+	Servers  serverInfo   `description:"overwrite servers info --servers.[ip|dc] [srv name]: value"`
+	Clients  *clientInfo  `long:"cli"  description:"overwrite server ip address"`
 }
 
 func TestGetTagsRecursive(t *testing.T) {
 	//Test all
 	var ex1 example
-	tagsmap := make(map[string]reflect.Type)
-	GetTagsRecursive(reflect.ValueOf(&ex1), tagsmap)
+	namesmap := make(map[string]reflect.Type)
+	if err := GetTypesRecursive(reflect.ValueOf(&ex1), namesmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 
 	checkType := map[string]reflect.Type{
-		"owner.org":      reflect.TypeOf(""),
-		"database.ena":   reflect.TypeOf(true),
-		"owner.bio":      reflect.TypeOf(""),
-		"database.comax": reflect.TypeOf(1),
-		"database.srv":   reflect.TypeOf(""),
-		"servers.ip":     reflect.TypeOf(""),
-		"owner.name":     reflect.TypeOf(""),
-		"servers.dc":     reflect.TypeOf(""),
-		"clients.data":   reflect.TypeOf([]int{}),
+		"Title":          reflect.TypeOf(""),
+		"own":            reflect.TypeOf(ownerInfo{}),
+		"cli":            reflect.TypeOf(&clientInfo{}),
+		"cli.Hosts.ip":   reflect.TypeOf(""),
 		"t":              reflect.TypeOf(""),
-		"owner.dob":      reflect.TypeOf(time.Now()),
+		"Database":       reflect.TypeOf(databaseInfo{}),
+		"cli.data":       reflect.TypeOf([]int{}),
+		"cli.Hosts":      reflect.TypeOf([]serverInfo{}),
+		"cli.Hosts.dc":   reflect.TypeOf(""),
+		"own.name":       reflect.TypeOf(""),
+		"own.bio":        reflect.TypeOf(""),
+		"own.dob":        reflect.TypeOf(time.Time{}),
+		"Database.srv":   reflect.TypeOf(""),
+		"Database.comax": reflect.TypeOf(0),
+		"Servers":        reflect.TypeOf(serverInfo{}),
+		"own.org":        reflect.TypeOf(""),
+		"Database.ena":   reflect.TypeOf(true),
+		"Servers.ip":     reflect.TypeOf(""),
+		"Servers.dc":     reflect.TypeOf(""),
 	}
-	for tag, tagType := range tagsmap {
-		if checkType[tag] != tagType {
-			t.Fatalf("Type %s (of tag : %s) doesn't match with %s\n", tagType, tag, checkType[tag])
+	for name, nameType := range namesmap {
+		if checkType[name] != nameType {
+			t.Fatalf("Tag : %s, got %s expected %s\n", name, nameType, checkType[name])
 		}
 	}
 
@@ -102,18 +112,18 @@ func TestParseArgs(t *testing.T) {
 	//Test all
 	var ex1 example
 	tagsmap := make(map[string]reflect.Type)
-	GetTagsRecursive(reflect.ValueOf(ex1), tagsmap)
+	GetTypesRecursive(reflect.ValueOf(ex1), tagsmap, "")
 	// fmt.Println(tagsmap)
 	args := []string{
-		"-owner.org", "org",
+		"-own.org", "org",
 		"-database.ena", //or +"=true"
-		"-owner.bio", "bio",
+		"-own.bio", "bio",
 		"-database.comax", "123",
 		"-database.srv", "srv",
 		"-servers.ip", "ip",
-		"-owner.name", "name",
+		"-own.name", "name",
 		"-servers.dc", "dc",
-		"-clients.data", "{1,2,3,4}",
+		"-cli.data", "{1,2,3,4}",
 		"-t", "title",
 		"-owner.dob", "1979-05-27T07:32:00Z",
 	}
@@ -122,17 +132,17 @@ func TestParseArgs(t *testing.T) {
 	//CHECK
 	myTime, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	checkParse := map[string]interface{}{
-		"owner.org":      stringValue("org"),
+		"own.org":        stringValue("org"),
 		"database.ena":   boolValue(true),
-		"owner.bio":      stringValue("bio"),
+		"own.bio":        stringValue("bio"),
 		"database.comax": intValue(123),
 		"database.srv":   stringValue("srv"),
 		"servers.ip":     stringValue("ip"),
-		"owner.name":     stringValue("name"),
+		"own.name":       stringValue("name"),
 		"servers.dc":     stringValue("dc"),
-		"clients.data":   customValue([]int{1, 2, 3, 4}),
+		"cli.data":       customValue([]int{1, 2, 3, 4}),
 		"t":              stringValue("title"),
-		"owner.dob":      timeValue(myTime),
+		"own.dob":        timeValue(myTime),
 	}
 	for tag, inter := range pargs {
 		v1 := reflect.ValueOf(checkParse[tag]).Interface()
@@ -161,7 +171,7 @@ func TestFillStructRecursive(t *testing.T) {
 	//Test
 	var ex example
 	tagsmap := make(map[string]reflect.Type)
-	GetTagsRecursive(reflect.ValueOf(ex), tagsmap)
+	GetTypesRecursive(reflect.ValueOf(ex), tagsmap, "")
 	args := []string{
 		"-owner.org", "org",
 		"-database.ena", //or +"=true"
