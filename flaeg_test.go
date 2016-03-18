@@ -38,7 +38,7 @@ type example struct {
 	Clients  *clientInfo  `long:"cli"  description:"overwrite server ip address"`
 }
 
-func TestGetTagsRecursive(t *testing.T) {
+func TestGetTypesRecursive(t *testing.T) {
 	//Test all
 	var ex1 example
 	namesmap := make(map[string]reflect.Type)
