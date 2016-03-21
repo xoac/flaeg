@@ -47,25 +47,25 @@ func TestGetTypesRecursive(t *testing.T) {
 	}
 
 	checkType := map[string]reflect.Type{
-		"Title":          reflect.TypeOf(""),
+		"title":          reflect.TypeOf(""),
 		"own":            reflect.TypeOf(ownerInfo{}),
 		"cli":            reflect.TypeOf(&clientInfo{}),
-		"cli.Hosts.ip":   reflect.TypeOf(""),
+		"cli.hosts.ip":   reflect.TypeOf(""),
 		"t":              reflect.TypeOf(""),
-		"Database":       reflect.TypeOf(databaseInfo{}),
+		"database":       reflect.TypeOf(databaseInfo{}),
 		"cli.data":       reflect.TypeOf([]int{}),
-		"cli.Hosts":      reflect.TypeOf([]serverInfo{}),
-		"cli.Hosts.dc":   reflect.TypeOf(""),
+		"cli.hosts":      reflect.TypeOf([]serverInfo{}),
+		"cli.hosts.dc":   reflect.TypeOf(""),
 		"own.name":       reflect.TypeOf(""),
 		"own.bio":        reflect.TypeOf(""),
 		"own.dob":        reflect.TypeOf(time.Time{}),
-		"Database.srv":   reflect.TypeOf(""),
-		"Database.comax": reflect.TypeOf(0),
-		"Servers":        reflect.TypeOf(serverInfo{}),
+		"database.srv":   reflect.TypeOf(""),
+		"database.comax": reflect.TypeOf(0),
+		"servers":        reflect.TypeOf(serverInfo{}),
 		"own.org":        reflect.TypeOf(""),
-		"Database.ena":   reflect.TypeOf(true),
-		"Servers.ip":     reflect.TypeOf(""),
-		"Servers.dc":     reflect.TypeOf(""),
+		"database.ena":   reflect.TypeOf(true),
+		"servers.ip":     reflect.TypeOf(""),
+		"servers.dc":     reflect.TypeOf(""),
 	}
 	for name, nameType := range namesmap {
 		if checkType[name] != nameType {
@@ -112,43 +112,62 @@ func TestParseArgs(t *testing.T) {
 	//Test all
 	var ex1 example
 	tagsmap := make(map[string]reflect.Type)
+
 	GetTypesRecursive(reflect.ValueOf(ex1), tagsmap, "")
-	// fmt.Println(tagsmap)
 	args := []string{
-		"-own.org", "org",
-		"-database.ena", //or +"=true"
-		"-own.bio", "bio",
-		"-database.comax", "123",
-		"-database.srv", "srv",
-		"-servers.ip", "ip",
-		"-own.name", "name",
-		"-servers.dc", "dc",
+		// "-title", "myTitle",
+		// "own",
+		// "cli":
+		"-cli.hosts.ip", "myIp",
+		"-t", "myTitle",
+		// "-database",""
 		"-cli.data", "{1,2,3,4}",
-		"-t", "title",
-		"-owner.dob", "1979-05-27T07:32:00Z",
+		// "-cli.hosts",""
+		"-cli.hosts.dc", "myDc",
+		"-own.name", "myOwnName",
+		"-own.bio", "myOwnBio",
+		"-own.dob", "1979-05-27T07:32:00Z",
+		"-database.srv", "mySrv",
+		"-database.comax", "1000",
+		// "-servers":
+		"-own.org", "myOwnOrg",
+		"-database.ena", //=true"
+		"-servers.ip", "myServersIp",
+		"-servers.dc", "myServersDc",
 	}
 	pargs := ParseArgs(args, tagsmap, parsers)
 
 	//CHECK
 	myTime, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	checkParse := map[string]interface{}{
-		"own.org":        stringValue("org"),
-		"database.ena":   boolValue(true),
-		"own.bio":        stringValue("bio"),
-		"database.comax": intValue(123),
-		"database.srv":   stringValue("srv"),
-		"servers.ip":     stringValue("ip"),
-		"own.name":       stringValue("name"),
-		"servers.dc":     stringValue("dc"),
-		"cli.data":       customValue([]int{1, 2, 3, 4}),
-		"t":              stringValue("title"),
+
+		// "title", "myTitle",
+		// "own",
+		// "cli":
+		"cli.hosts.ip": stringValue("myIp"),
+		"t":            stringValue("myTitle"),
+		// "database",""
+		"cli.data": customValue([]int{1, 2, 3, 4}),
+		// "cli.hosts",""
+		"cli.hosts.dc":   stringValue("myDc"),
+		"own.name":       stringValue("myOwnName"),
+		"own.bio":        stringValue("myOwnBio"),
 		"own.dob":        timeValue(myTime),
+		"database.srv":   stringValue("mySrv"),
+		"database.comax": intValue(1000),
+		// "servers":
+		"own.org":      stringValue("myOwnOrg"),
+		"database.ena": boolValue(true), //=true"
+		"servers.ip":   stringValue("myServersIp"),
+		"servers.dc":   stringValue("myServersDc"),
 	}
 	for tag, inter := range pargs {
-		v1 := reflect.ValueOf(checkParse[tag]).Interface()
-		v2 := reflect.ValueOf(inter).Elem().Interface()
-		if !reflect.DeepEqual(v1, v2) {
-			t.Fatalf("Error tag %s : expected %+v got %+v", tag, v1, v2)
+		if checkParse[tag] != nil {
+			v1 := reflect.ValueOf(checkParse[tag])
+			v2 := reflect.ValueOf(inter).Elem()
+			if !reflect.DeepEqual(v1.Interface(), v2.Interface()) {
+				t.Fatalf("Error tag %s : expected %+v got %+v", tag, v1, v2)
+			}
 		}
 	}
 }
