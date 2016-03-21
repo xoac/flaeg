@@ -76,55 +76,6 @@ func TestGetTypesRecursive(t *testing.T) {
 
 }
 
-// -- custom Value
-type customValue []int
-
-func bracket(r rune) bool {
-	return r == '{' || r == '}' || r == ',' || r == ';'
-}
-func (c *customValue) Set(s string) error {
-	tabStr := strings.FieldsFunc(s, bracket)
-	for _, str := range tabStr {
-		v, err := strconv.Atoi(str)
-		if err != nil {
-			return err
-		}
-		*c = append(*c, v)
-	}
-	return nil
-}
-
-func (c *customValue) String() string { return fmt.Sprintf("%v", *c) }
-
-// -- sliceIntValue
-type sliceIntValue []int
-
-func (c *sliceIntValue) Set(s string) error {
-	v, err := strconv.Atoi(s)
-	if err != nil {
-		return err
-	}
-	*c = append(*c, v)
-	return nil
-}
-
-func (c *sliceIntValue) String() string { return fmt.Sprintf("%v", *c) }
-
-// -- sliceServerValue format {IP,DC}
-type sliceServerValue []serverInfo
-
-func (c *sliceServerValue) Set(s string) error {
-	tabStr := strings.FieldsFunc(s, bracket)
-	if len(tabStr) != 2 {
-		return errors.New("sliceServerValue cannot parse %s to serverInfo. Format {IP,DC}")
-	}
-	srv := serverInfo{IP: tabStr[0], Dc: tabStr[1]}
-	*c = append(*c, srv)
-	return nil
-}
-
-func (c *sliceServerValue) String() string { return fmt.Sprintf("%v", *c) }
-
 func TestParseArgs(t *testing.T) {
 	//creating parsers
 	parsers := map[reflect.Type]flag.Value{}
@@ -145,7 +96,9 @@ func TestParseArgs(t *testing.T) {
 	var ex1 example
 	tagsmap := make(map[string]reflect.Type)
 
-	GetTypesRecursive(reflect.ValueOf(ex1), tagsmap, "")
+	if err := GetTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 	args := []string{
 		// "-title", "myTitle",
 		// "own",
@@ -167,7 +120,10 @@ func TestParseArgs(t *testing.T) {
 		"-servers.ip", "myServersIp",
 		"-servers.dc", "myServersDc",
 	}
-	pargs := ParseArgs(args, tagsmap, parsers)
+	pargs, err := ParseArgs(args, tagsmap, parsers)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 
 	//CHECK
 	myTime, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
@@ -250,7 +206,11 @@ func TestFillStructRecursive(t *testing.T) {
 		"-cli.data", "3",
 		"-cli.data", "4",
 	}
-	pargs := ParseArgs(args, tagsmap, parsers)
+
+	pargs, err := ParseArgs(args, tagsmap, parsers)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 
 	if err := FillStructRecursive(reflect.ValueOf(&ex1), pargs, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
@@ -274,3 +234,53 @@ func TestFillStructRecursive(t *testing.T) {
 	}
 
 }
+
+// -- CUSTOM PARSERS
+// -- custom Value
+type customValue []int
+
+func bracket(r rune) bool {
+	return r == '{' || r == '}' || r == ',' || r == ';'
+}
+func (c *customValue) Set(s string) error {
+	tabStr := strings.FieldsFunc(s, bracket)
+	for _, str := range tabStr {
+		v, err := strconv.Atoi(str)
+		if err != nil {
+			return err
+		}
+		*c = append(*c, v)
+	}
+	return nil
+}
+
+func (c *customValue) String() string { return fmt.Sprintf("%v", *c) }
+
+// -- sliceIntValue
+type sliceIntValue []int
+
+func (c *sliceIntValue) Set(s string) error {
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
+	*c = append(*c, v)
+	return nil
+}
+
+func (c *sliceIntValue) String() string { return fmt.Sprintf("%v", *c) }
+
+// -- sliceServerValue format {IP,DC}
+type sliceServerValue []serverInfo
+
+func (c *sliceServerValue) Set(s string) error {
+	tabStr := strings.FieldsFunc(s, bracket)
+	if len(tabStr) != 2 {
+		return errors.New("sliceServerValue cannot parse %s to serverInfo. Format {IP,DC}")
+	}
+	srv := serverInfo{IP: tabStr[0], Dc: tabStr[1]}
+	*c = append(*c, srv)
+	return nil
+}
+
+func (c *sliceServerValue) String() string { return fmt.Sprintf("%v", *c) }

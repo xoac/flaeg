@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"log"
 	"reflect"
 	"strings"
 )
@@ -56,7 +55,7 @@ func GetTypesRecursive(objValue reflect.Value, namesmap map[string]reflect.Type,
 
 //ParseArgs : parses args into a map[tag]value, using map[type]parser
 //args must be formated as like as flag documentation. See https://golang.org/pkg/flag
-func ParseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[reflect.Type]flag.Value) map[string]interface{} {
+func ParseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[reflect.Type]flag.Value) (map[string]interface{}, error) {
 	newParsers := map[string]flag.Value{}
 	flagSet := flag.NewFlagSet("flaeg.ParseArgs", flag.ExitOnError)
 	valmap := make(map[string]interface{})
@@ -67,11 +66,13 @@ func ParseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[refle
 			newParsers[tag] = newparser
 		}
 	}
-	flagSet.Parse(args)
+	if err := flagSet.Parse(args); err != nil {
+		return nil, err
+	}
 	for tag, newParser := range newParsers {
 		valmap[tag] = newParser
 	}
-	return valmap
+	return valmap, nil
 }
 
 //FillStructRecursive initialize a value of any taged Struct given by reference
@@ -89,7 +90,10 @@ func FillStructRecursive(objValue reflect.Value, valmap map[string]interface{}, 
 					fieldName = tag
 				}
 				if tag := objValue.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
-					SetFields(objValue.Field(i), valmap, strings.ToLower(tag))
+					if err := SetFields(objValue.Field(i), valmap, strings.ToLower(tag)); err != nil {
+						return err
+					}
+
 				}
 				if len(key) == 0 {
 					name = fieldName
@@ -97,7 +101,9 @@ func FillStructRecursive(objValue reflect.Value, valmap map[string]interface{}, 
 					name = key + "." + fieldName
 				}
 				// fmt.Printf("tag : %s\n", name)
-				SetFields(objValue.Field(i), valmap, strings.ToLower(name))
+				if err := SetFields(objValue.Field(i), valmap, strings.ToLower(name)); err != nil {
+					return err
+				}
 				if err := FillStructRecursive(objValue.Field(i), valmap, name); err != nil {
 					return err
 				}
@@ -122,9 +128,8 @@ func FillStructRecursive(objValue reflect.Value, valmap map[string]interface{}, 
 	return nil
 }
 
-//TO DO error
 // SetFields sets value to fieldValue using tag as key in valmap
-func SetFields(fieldValue reflect.Value, valmap map[string]interface{}, tag string) {
+func SetFields(fieldValue reflect.Value, valmap map[string]interface{}, tag string) error {
 	if reflect.DeepEqual(fieldValue.Interface(), reflect.New(fieldValue.Type()).Elem().Interface()) {
 		if fieldValue.CanSet() {
 			if val, ok := valmap[tag]; ok {
@@ -132,9 +137,9 @@ func SetFields(fieldValue reflect.Value, valmap map[string]interface{}, tag stri
 				fieldValue.Set(reflect.ValueOf(val).Elem().Convert(fieldValue.Type()))
 			}
 		} else {
-			log.Fatalf("Error : type %s is not a settable ...\n", fieldValue.Type())
+			return errors.New(fieldValue.Type().String() + " is not settable.")
 		}
 
 	}
-
+	return nil
 }
