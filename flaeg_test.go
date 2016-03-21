@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"reflect"
@@ -95,6 +96,35 @@ func (c *customValue) Set(s string) error {
 
 func (c *customValue) String() string { return fmt.Sprintf("%v", *c) }
 
+// -- sliceIntValue
+type sliceIntValue []int
+
+func (c *sliceIntValue) Set(s string) error {
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
+	*c = append(*c, v)
+	return nil
+}
+
+func (c *sliceIntValue) String() string { return fmt.Sprintf("%v", *c) }
+
+// -- sliceServerValue format {IP,DC}
+type sliceServerValue []serverInfo
+
+func (c *sliceServerValue) Set(s string) error {
+	tabStr := strings.FieldsFunc(s, bracket)
+	if len(tabStr) != 2 {
+		return errors.New("sliceServerValue cannot parse %s to serverInfo. Format {IP,DC}")
+	}
+	srv := serverInfo{IP: tabStr[0], Dc: tabStr[1]}
+	*c = append(*c, srv)
+	return nil
+}
+
+func (c *sliceServerValue) String() string { return fmt.Sprintf("%v", *c) }
+
 func TestParseArgs(t *testing.T) {
 	//creating parsers
 	parsers := map[reflect.Type]flag.Value{}
@@ -102,11 +132,13 @@ func TestParseArgs(t *testing.T) {
 	var myBoolParser boolValue
 	var myIntParser intValue
 	var myCustomParser customValue
+	var mySliceServerParser sliceServerValue
 	var myTimeParser timeValue
 	parsers[reflect.TypeOf("")] = &myStringParser
 	parsers[reflect.TypeOf(true)] = &myBoolParser
 	parsers[reflect.TypeOf(1)] = &myIntParser
 	parsers[reflect.TypeOf([]int{})] = &myCustomParser
+	parsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
 	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
 
 	//Test all
@@ -118,12 +150,12 @@ func TestParseArgs(t *testing.T) {
 		// "-title", "myTitle",
 		// "own",
 		// "cli":
-		"-cli.hosts.ip", "myIp",
+		"-cli.hosts", "{myIp1,myDc1}",
 		"-t", "myTitle",
 		// "-database",""
 		"-cli.data", "{1,2,3,4}",
 		// "-cli.hosts",""
-		"-cli.hosts.dc", "myDc",
+		"-cli.hosts", "{myIp2,myDc2}",
 		"-own.name", "myOwnName",
 		"-own.bio", "myOwnBio",
 		"-own.dob", "1979-05-27T07:32:00Z",
@@ -144,12 +176,11 @@ func TestParseArgs(t *testing.T) {
 		// "title", "myTitle",
 		// "own",
 		// "cli":
-		"cli.hosts.ip": stringValue("myIp"),
-		"t":            stringValue("myTitle"),
+		"cli.hosts": sliceServerValue([]serverInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}),
+		"t":         stringValue("myTitle"),
 		// "database",""
 		"cli.data": customValue([]int{1, 2, 3, 4}),
 		// "cli.hosts",""
-		"cli.hosts.dc":   stringValue("myDc"),
 		"own.name":       stringValue("myOwnName"),
 		"own.bio":        stringValue("myOwnBio"),
 		"own.dob":        timeValue(myTime),
@@ -173,54 +204,73 @@ func TestParseArgs(t *testing.T) {
 }
 
 func TestFillStructRecursive(t *testing.T) {
-
 	//creating parsers
 	parsers := map[reflect.Type]flag.Value{}
 	var myStringParser stringValue
 	var myBoolParser boolValue
 	var myIntParser intValue
-	var myCustomParser customValue
+	var myCustomParser sliceIntValue
+	var mySliceServerParser sliceServerValue
 	var myTimeParser timeValue
 	parsers[reflect.TypeOf("")] = &myStringParser
 	parsers[reflect.TypeOf(true)] = &myBoolParser
 	parsers[reflect.TypeOf(1)] = &myIntParser
 	parsers[reflect.TypeOf([]int{})] = &myCustomParser
+	parsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
 	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
 
-	//Test
-	var ex example
+	//Test all
+	var ex1 example
 	tagsmap := make(map[string]reflect.Type)
-	GetTypesRecursive(reflect.ValueOf(ex), tagsmap, "")
+
+	if err := GetTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 	args := []string{
-		"-owner.org", "org",
-		"-database.ena", //or +"=true"
-		"-owner.bio", "bio",
-		"-database.comax", "123",
-		"-database.srv", "srv",
-		"-servers.ip", "ip",
-		"-owner.name", "name",
-		"-servers.dc", "dc",
-		"-clients.data", "{1,2,3,4}",
-		"-t", "title",
-		"-owner.dob", "1979-05-27T07:32:00Z",
+		// "-title", "myTitle",
+		// "own",
+		// "cli":
+		"-cli.hosts", "{myIp1,myDc1}",
+		"-t", "myTitle",
+		// "-database",""
+		// "-cli.hosts",""
+		"-cli.hosts", "{myIp2,myDc2}",
+		"-own.name", "myOwnName",
+		"-own.bio", "myOwnBio",
+		"-own.dob", "1979-05-27T07:32:00Z",
+		"-database.srv", "mySrv",
+		"-database.comax", "1000",
+		// "-servers":
+		"-own.org", "myOwnOrg",
+		"-database.ena", //=true"
+		"-servers.ip", "myServersIp",
+		"-servers.dc", "myServersDc",
+		"-cli.data", "1",
+		"-cli.data", "2",
+		"-cli.data", "3",
+		"-cli.data", "4",
 	}
 	pargs := ParseArgs(args, tagsmap, parsers)
-	FillStructRecursive(reflect.ValueOf(&ex), pargs)
+
+	if err := FillStructRecursive(reflect.ValueOf(&ex1), pargs, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 
 	//CHECK
 	var check example
-	check.Title = "title"
-	check.Owner.Name = "name"
-	check.Owner.Organization = "org"
-	check.Owner.Bio = "bio"
+	check.Title = "myTitle"
+	check.Owner.Name = "myOwnName"
+	check.Owner.Organization = "myOwnOrg"
+	check.Owner.Bio = "myOwnBio"
 	check.Owner.Dob, _ = time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
-	check.Database.Server = "srv"
-	check.Database.ConnectionMax = 123
+	check.Database.Server = "mySrv"
+	check.Database.ConnectionMax = 1000
 	check.Database.Enable = true
-	check.Servers.IP = "ip"
-	check.Servers.Dc = "dc"
-	check.Clients = &clientInfo{Data: []int{1, 2, 3, 4}}
-	if !reflect.DeepEqual(ex, check) {
-		t.Fatalf("expected\t: %+v\ngot\t\t: %+v", check, ex)
+	check.Servers.IP = "myServersIp"
+	check.Servers.Dc = "myServersDc"
+	check.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []serverInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}}
+	if !reflect.DeepEqual(ex1, check) {
+		t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check, ex1)
 	}
+
 }
