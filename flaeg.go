@@ -157,9 +157,6 @@ func loadParsers(customParsers map[reflect.Type]flag.Value) (map[reflect.Type]fl
 	parsers[reflect.TypeOf(1)] = &intParser
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	for rType, parser := range customParsers {
-		if _, ok := parsers[rType]; ok {
-			return parsers, errors.New("Parser already exists on type " + rType.String())
-		}
 		parsers[rType] = parser
 	}
 	return parsers, nil
