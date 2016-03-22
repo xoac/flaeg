@@ -165,6 +165,24 @@ func loadParsers(customParsers map[reflect.Type]flag.Value) (map[reflect.Type]fl
 	return parsers, nil
 }
 
-// func Load(config interface{}, args []string, customParsers map[reflect.Type]flag.Value) error {
+//Load initializes config : struct fields given by reference, with args : arguments.
+//Some custom parsers may be given.
+func Load(config interface{}, args []string, customParsers map[reflect.Type]flag.Value) error {
+	parsers, err := loadParsers(customParsers)
+	if err != nil {
+		return err
+	}
+	tagsmap := make(map[string]reflect.Type)
+	if err := getTypesRecursive(reflect.ValueOf(config), tagsmap, ""); err != nil {
+		return err
+	}
+	pargs, err := parseArgs(args, tagsmap, parsers)
+	if err != nil {
+		return err
+	}
+	if err := fillStructRecursive(reflect.ValueOf(config), pargs, ""); err != nil {
+		return err
+	}
 
-// }
+	return nil
+}

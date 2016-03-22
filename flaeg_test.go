@@ -179,7 +179,7 @@ func TestFillStructRecursive(t *testing.T) {
 	var ex1 example
 	tagsmap := make(map[string]reflect.Type)
 
-	if err := getTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
+	if err := getTypesRecursive(reflect.ValueOf(&ex1), tagsmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 	args := []string{
@@ -315,4 +315,54 @@ func TestLoadParsers(t *testing.T) {
 		t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check, parsers)
 	}
 
+}
+
+func TestLoad(t *testing.T) {
+	//creating parsers
+	customParsers := map[reflect.Type]flag.Value{}
+	var mySliceIntParser sliceIntValue
+	var mySliceServerParser sliceServerValue
+	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
+	customParsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
+
+	//args
+	args := []string{
+		"-cli.hosts", "{myIp1,myDc1}",
+		"-t", "myTitle",
+		"-cli.hosts", "{myIp2,myDc2}",
+		"-own.name", "myOwnName",
+		"-own.bio", "myOwnBio",
+		"-own.dob", "1979-05-27T07:32:00Z",
+		"-database.srv", "mySrv",
+		"-database.comax", "1000",
+		"-own.org", "myOwnOrg",
+		"-database.ena", //=true"
+		"-servers.ip", "myServersIp",
+		"-servers.dc", "myServersDc",
+		"-cli.data", "1",
+		"-cli.data", "2",
+		"-cli.data", "3",
+		"-cli.data", "4",
+	}
+
+	//Test all
+	var ex1 example
+	Load(&ex1, args, customParsers)
+
+	//CHECK
+	var check example
+	check.Title = "myTitle"
+	check.Owner.Name = "myOwnName"
+	check.Owner.Organization = "myOwnOrg"
+	check.Owner.Bio = "myOwnBio"
+	check.Owner.Dob, _ = time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
+	check.Database.Server = "mySrv"
+	check.Database.ConnectionMax = 1000
+	check.Database.Enable = true
+	check.Servers.IP = "myServersIp"
+	check.Servers.Dc = "myServersDc"
+	check.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []serverInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}}
+	if !reflect.DeepEqual(ex1, check) {
+		t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check, ex1)
+	}
 }
