@@ -347,8 +347,10 @@ func TestLoad(t *testing.T) {
 
 	//Test all
 	var ex1 example
-	Load(&ex1, args, customParsers)
 
+	if err := Load(&ex1, args, customParsers); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 	//CHECK
 	var check example
 	check.Title = "myTitle"
