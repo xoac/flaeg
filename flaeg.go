@@ -5,12 +5,13 @@ import (
 	"flag"
 	"reflect"
 	"strings"
+	"time"
 )
 
 // GetTypesRecursive links in namesmap a flag with there flildstruct Type
 // You can whether provide objValue on a structure or a pointer to structure as first argument
 // Flags are genereted from field name or from structags
-func GetTypesRecursive(objValue reflect.Value, namesmap map[string]reflect.Type, key string) error {
+func getTypesRecursive(objValue reflect.Value, namesmap map[string]reflect.Type, key string) error {
 	name := key
 	switch objValue.Kind() {
 	case reflect.Struct:
@@ -36,7 +37,7 @@ func GetTypesRecursive(objValue reflect.Value, namesmap map[string]reflect.Type,
 					return errors.New("Tag already exists: " + name)
 				}
 				namesmap[strings.ToLower(name)] = objValue.Field(i).Type()
-				if err := GetTypesRecursive(objValue.Field(i), namesmap, name); err != nil {
+				if err := getTypesRecursive(objValue.Field(i), namesmap, name); err != nil {
 					return err
 				}
 			}
@@ -44,7 +45,7 @@ func GetTypesRecursive(objValue reflect.Value, namesmap map[string]reflect.Type,
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.Ptr:
 		typ := objValue.Type().Elem()
 		inst := reflect.New(typ).Elem()
-		if err := GetTypesRecursive(inst, namesmap, name); err != nil {
+		if err := getTypesRecursive(inst, namesmap, name); err != nil {
 			return err
 		}
 	default:
@@ -55,7 +56,7 @@ func GetTypesRecursive(objValue reflect.Value, namesmap map[string]reflect.Type,
 
 //ParseArgs : parses args into a map[tag]value, using map[type]parser
 //args must be formated as like as flag documentation. See https://golang.org/pkg/flag
-func ParseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[reflect.Type]flag.Value) (map[string]interface{}, error) {
+func parseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[reflect.Type]flag.Value) (map[string]interface{}, error) {
 	newParsers := map[string]flag.Value{}
 	flagSet := flag.NewFlagSet("flaeg.ParseArgs", flag.ExitOnError)
 	valmap := make(map[string]interface{})
@@ -76,7 +77,7 @@ func ParseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[refle
 }
 
 //FillStructRecursive initialize a value of any taged Struct given by reference
-func FillStructRecursive(objValue reflect.Value, valmap map[string]interface{}, key string) error {
+func fillStructRecursive(objValue reflect.Value, valmap map[string]interface{}, key string) error {
 	name := key
 	// fmt.Printf("objValue begin : %+v\n", objValue)
 	switch objValue.Kind() {
@@ -90,7 +91,7 @@ func FillStructRecursive(objValue reflect.Value, valmap map[string]interface{}, 
 					fieldName = tag
 				}
 				if tag := objValue.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
-					if err := SetFields(objValue.Field(i), valmap, strings.ToLower(tag)); err != nil {
+					if err := setFields(objValue.Field(i), valmap, strings.ToLower(tag)); err != nil {
 						return err
 					}
 
@@ -101,10 +102,10 @@ func FillStructRecursive(objValue reflect.Value, valmap map[string]interface{}, 
 					name = key + "." + fieldName
 				}
 				// fmt.Printf("tag : %s\n", name)
-				if err := SetFields(objValue.Field(i), valmap, strings.ToLower(name)); err != nil {
+				if err := setFields(objValue.Field(i), valmap, strings.ToLower(name)); err != nil {
 					return err
 				}
-				if err := FillStructRecursive(objValue.Field(i), valmap, name); err != nil {
+				if err := fillStructRecursive(objValue.Field(i), valmap, name); err != nil {
 					return err
 				}
 			}
@@ -112,12 +113,12 @@ func FillStructRecursive(objValue reflect.Value, valmap map[string]interface{}, 
 	case reflect.Ptr:
 		if objValue.IsNil() {
 			inst := reflect.New(objValue.Type().Elem())
-			if err := FillStructRecursive(inst.Elem(), valmap, name); err != nil {
+			if err := fillStructRecursive(inst.Elem(), valmap, name); err != nil {
 				return err
 			}
 			objValue.Set(inst)
 		} else {
-			if err := FillStructRecursive(objValue.Elem(), valmap, name); err != nil {
+			if err := fillStructRecursive(objValue.Elem(), valmap, name); err != nil {
 				return err
 			}
 		}
@@ -129,7 +130,7 @@ func FillStructRecursive(objValue reflect.Value, valmap map[string]interface{}, 
 }
 
 // SetFields sets value to fieldValue using tag as key in valmap
-func SetFields(fieldValue reflect.Value, valmap map[string]interface{}, tag string) error {
+func setFields(fieldValue reflect.Value, valmap map[string]interface{}, tag string) error {
 	if reflect.DeepEqual(fieldValue.Interface(), reflect.New(fieldValue.Type()).Elem().Interface()) {
 		if fieldValue.CanSet() {
 			if val, ok := valmap[tag]; ok {
@@ -143,3 +144,27 @@ func SetFields(fieldValue reflect.Value, valmap map[string]interface{}, tag stri
 	}
 	return nil
 }
+
+//loadParsers loads default parsers and custom parsers given as parameter. Return a map [reflect.Type]parsers
+func loadParsers(customParsers map[reflect.Type]flag.Value) (map[reflect.Type]flag.Value, error) {
+	parsers := map[reflect.Type]flag.Value{}
+	var stringParser stringValue
+	var boolParser boolValue
+	var intParser intValue
+	var timeParser timeValue
+	parsers[reflect.TypeOf("")] = &stringParser
+	parsers[reflect.TypeOf(true)] = &boolParser
+	parsers[reflect.TypeOf(1)] = &intParser
+	parsers[reflect.TypeOf(time.Now())] = &timeParser
+	for rType, parser := range customParsers {
+		if _, ok := parsers[rType]; ok {
+			return parsers, errors.New("Parser already exists on type " + rType.String())
+		}
+		parsers[rType] = parser
+	}
+	return parsers, nil
+}
+
+// func Load(config interface{}, args []string, customParsers map[reflect.Type]flag.Value) error {
+
+// }

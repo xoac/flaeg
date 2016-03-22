@@ -43,7 +43,7 @@ func TestGetTypesRecursive(t *testing.T) {
 	//Test all
 	var ex1 example
 	namesmap := make(map[string]reflect.Type)
-	if err := GetTypesRecursive(reflect.ValueOf(&ex1), namesmap, ""); err != nil {
+	if err := getTypesRecursive(reflect.ValueOf(&ex1), namesmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -96,7 +96,7 @@ func TestParseArgs(t *testing.T) {
 	var ex1 example
 	tagsmap := make(map[string]reflect.Type)
 
-	if err := GetTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
+	if err := getTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 	args := []string{
@@ -120,7 +120,7 @@ func TestParseArgs(t *testing.T) {
 		"-servers.ip", "myServersIp",
 		"-servers.dc", "myServersDc",
 	}
-	pargs, err := ParseArgs(args, tagsmap, parsers)
+	pargs, err := parseArgs(args, tagsmap, parsers)
 	if err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -179,7 +179,7 @@ func TestFillStructRecursive(t *testing.T) {
 	var ex1 example
 	tagsmap := make(map[string]reflect.Type)
 
-	if err := GetTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
+	if err := getTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 	args := []string{
@@ -207,12 +207,12 @@ func TestFillStructRecursive(t *testing.T) {
 		"-cli.data", "4",
 	}
 
-	pargs, err := ParseArgs(args, tagsmap, parsers)
+	pargs, err := parseArgs(args, tagsmap, parsers)
 	if err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
-	if err := FillStructRecursive(reflect.ValueOf(&ex1), pargs, ""); err != nil {
+	if err := fillStructRecursive(reflect.ValueOf(&ex1), pargs, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -284,3 +284,35 @@ func (c *sliceServerValue) Set(s string) error {
 }
 
 func (c *sliceServerValue) String() string { return fmt.Sprintf("%v", *c) }
+
+func TestLoadParsers(t *testing.T) {
+	//creating parsers
+	customParsers := map[reflect.Type]flag.Value{}
+	var mySliceIntParser sliceIntValue
+	var mySliceServerParser sliceServerValue
+	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
+	customParsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
+	//Test loadParsers
+	parsers, err := loadParsers(customParsers)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//check
+	check := map[reflect.Type]flag.Value{}
+	check[reflect.TypeOf([]int{})] = &mySliceIntParser
+	check[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
+	var stringParser stringValue
+	var boolParser boolValue
+	var intParser intValue
+	var timeParser timeValue
+	check[reflect.TypeOf("")] = &stringParser
+	check[reflect.TypeOf(true)] = &boolParser
+	check[reflect.TypeOf(1)] = &intParser
+	check[reflect.TypeOf(time.Now())] = &timeParser
+
+	if !reflect.DeepEqual(parsers, check) {
+		t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check, parsers)
+	}
+
+}
