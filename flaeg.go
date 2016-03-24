@@ -58,20 +58,28 @@ func getTypesRecursive(objValue reflect.Value, namesmap map[string]reflect.Type,
 //args must be formated as like as flag documentation. See https://golang.org/pkg/flag
 func parseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[reflect.Type]flag.Value) (map[string]flag.Value, error) {
 	newParsers := map[string]flag.Value{}
+	defaultValParsers := map[string]string{}
 	flagSet := flag.NewFlagSet("flaeg.ParseArgs", flag.ExitOnError)
 	valmap := make(map[string]flag.Value)
 	for tag, rType := range tagsmap {
+
 		if parser, ok := parsers[rType]; ok {
 			newparser := reflect.New(reflect.TypeOf(parser).Elem()).Interface().(flag.Value)
 			flagSet.Var(newparser, tag, "help")
 			newParsers[tag] = newparser
+			defaultValParsers[tag] = newparser.String()
 		}
 	}
+
 	if err := flagSet.Parse(args); err != nil {
 		return nil, err
 	}
 	for tag, newParser := range newParsers {
-		valmap[tag] = newParser
+
+		if newParser.String() != defaultValParsers[tag] {
+			valmap[tag] = newParser
+			// fmt.Printf("tag : %s, value : %s default : %s\n", tag, newParser.String(), defaultValParsers[tag])
+		}
 	}
 	return valmap, nil
 }
