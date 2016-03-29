@@ -56,9 +56,8 @@ func getTypesRecursive(objValue reflect.Value, namesmap map[string]reflect.Type,
 
 //ParseArgs : parses args into a map[tag]value, using map[type]parser
 //args must be formated as like as flag documentation. See https://golang.org/pkg/flag
-func parseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[reflect.Type]flag.Value) (map[string]flag.Value, error) {
+func parseArgs(args []string, tagsmap map[string]reflect.Type, defaultValmap map[string]flag.Value, parsers map[reflect.Type]flag.Value) (map[string]flag.Value, error) {
 	newParsers := map[string]flag.Value{}
-	defaultValParsers := map[string]string{}
 	flagSet := flag.NewFlagSet("flaeg.ParseArgs", flag.ExitOnError)
 	valmap := make(map[string]flag.Value)
 	for tag, rType := range tagsmap {
@@ -66,20 +65,24 @@ func parseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[refle
 		if parser, ok := parsers[rType]; ok {
 			newparser := reflect.New(reflect.TypeOf(parser).Elem()).Interface().(flag.Value)
 			flagSet.Var(newparser, tag, "help")
+			// if _, ok := defaultValmap[tag]; !ok {
+			// 	return nil, errors.New("default value doesn't exit for flag " + tag)
+			// }
+			// if err := flagSet.Set(tag, defaultValmap[tag].String()); err != nil {
+			// 	return nil, err
+			// }
 			newParsers[tag] = newparser
-			defaultValParsers[tag] = newparser.String()
 		}
 	}
 
 	if err := flagSet.Parse(args); err != nil {
 		return nil, err
 	}
+
 	for tag, newParser := range newParsers {
 
-		if newParser.String() != defaultValParsers[tag] {
-			valmap[tag] = newParser
-			// fmt.Printf("tag : %s, value : %s default : %s\n", tag, newParser.String(), defaultValParsers[tag])
-		}
+		valmap[tag] = newParser
+
 	}
 	return valmap, nil
 }
@@ -182,7 +185,7 @@ func Load(config interface{}, args []string, customParsers map[reflect.Type]flag
 	if err := getTypesRecursive(reflect.ValueOf(config), tagsmap, ""); err != nil {
 		return err
 	}
-	valmap, err := parseArgs(args, tagsmap, parsers)
+	valmap, err := parseArgs(args, tagsmap, nil, parsers)
 	if err != nil {
 		return err
 	}
@@ -191,4 +194,61 @@ func Load(config interface{}, args []string, customParsers map[reflect.Type]flag
 	}
 
 	return nil
+}
+
+//getStructRecursive initialize a value of any taged Struct given by reference
+func getStructRecursive(objValue reflect.Value, parsers map[reflect.Type]flag.Value, key string) (map[string]interface{}, error) {
+	name := key
+	valmap := make(map[string]interface{})
+	// fmt.Printf("objValue begin : %+v\n", objValue)
+	switch objValue.Kind() {
+	case reflect.Struct:
+		name += objValue.Type().Name()
+		for i := 0; i < objValue.Type().NumField(); i++ {
+			if desc := objValue.Type().Field(i).Tag.Get("description"); len(desc) > 0 {
+				if parser, isOk := parsers[objValue.Field(i).Type()]; isOk {
+					rvParser := reflect.New(reflect.TypeOf(parser).Elem())
+
+					rvParser.Set(objValue.Field(i))
+
+					fieldName := objValue.Type().Field(i).Name
+					if tag := objValue.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
+						fieldName = tag
+					}
+					if tag := objValue.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
+						valmap[strings.ToLower(tag)] = rvParser.Interface().(flag.Value)
+					}
+					if len(key) == 0 {
+						name = fieldName
+					} else {
+						name = key + "." + fieldName
+					}
+					valmap[strings.ToLower(name)] = rvParser.Interface().(flag.Value)
+				}
+				rtValmap, err := getStructRecursive(objValue.Field(i), parsers, name)
+				if err != nil {
+					return nil, err
+				}
+				for k, v := range rtValmap {
+					valmap[k] = v
+				}
+
+			}
+		}
+
+	case reflect.Ptr:
+		if !objValue.IsNil() {
+			rtValmap, err := getStructRecursive(objValue.Elem(), parsers, name)
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range rtValmap {
+				valmap[k] = v
+			}
+		}
+	default: //SLICE, map ?
+		return valmap, nil
+	}
+	// fmt.Printf("objValue end : %+v\n", objValue)
+	return valmap, nil
 }

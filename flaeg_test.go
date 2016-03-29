@@ -99,6 +99,7 @@ func TestParseArgs(t *testing.T) {
 	if err := getTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
+
 	args := []string{
 		// "-title", "myTitle",
 		// "own",
@@ -120,10 +121,11 @@ func TestParseArgs(t *testing.T) {
 		"-servers.ip", "myServersIp",
 		"-servers.dc", "myServersDc",
 	}
-	pargs, err := parseArgs(args, tagsmap, parsers)
+	pargs, err := parseArgs(args, tagsmap, nil, parsers)
 	if err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
+	fmt.Printf("result:%+v\n", pargs)
 
 	//CHECK
 	myTime, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
@@ -207,7 +209,7 @@ func TestFillStructRecursive(t *testing.T) {
 		"-cli.data", "4",
 	}
 
-	pargs, err := parseArgs(args, tagsmap, parsers)
+	pargs, err := parseArgs(args, tagsmap, nil, parsers)
 	if err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -367,4 +369,66 @@ func TestLoad(t *testing.T) {
 	if !reflect.DeepEqual(ex1, check) {
 		t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check, ex1)
 	}
+}
+
+func TestGetStructRecursive(t *testing.T) {
+	//creating parsers
+	customParsers := map[reflect.Type]flag.Value{}
+	var mySliceIntParser sliceIntValue
+	var mySliceServerParser sliceServerValue
+	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
+	customParsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
+	parsers, err := loadParsers(customParsers)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//test all
+	var ex example
+	ex.Title = "defaultTitle"
+	ex.Owner.Name = "defaultName"
+	ex.Owner.Organization = "defaultOrg"
+	ex.Owner.Bio = "defaultBio"
+	ex.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
+	ex.Database.Server = "defaultSrv"
+	ex.Database.ConnectionMax = 1111
+	ex.Database.Enable = false
+	ex.Servers.IP = "defaultServersIp"
+	ex.Servers.Dc = "defaultServersDc"
+	ex.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}
+	valmap, err := getStructRecursive(reflect.ValueOf(&ex), parsers, "")
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	fmt.Printf("valmap:%s\n", valmap)
+
+	//CHECK
+	// defaultTime, err := time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
+	// if err != nil {
+	// 	t.Errorf("Error %s", err.Error())
+	// }
+	// checkValmap := map[string]interface{}{
+	// 	"t":              "defaultTitle",
+	// 	"title":          "defaultTitle",
+	// 	"own":            ownerInfo{"defaultName", "defaultOrg", "defaultBio", defaultTime},
+	// 	"own.name":       "defaultName",
+	// 	"own.org":        "defaultOrg",
+	// 	"own.bio":        "defaultBio",
+	// 	"own.dob":        defaultTime,
+	// 	"database":       databaseInfo{},
+	// 	"database.srv":   "defaultSrv",
+	// 	"database.comax": 1111,
+	// 	"database.ena":   false,
+	// 	"servers":        serverInfo{"defaultServersIp", "defaultServersDc"},
+	// 	"servers.ip":     "defaultServersIp",
+	// 	"servers.dc":     "defaultServersDc",
+	// 	"cli":            nil,
+	// 	"cli.data":       []int{1, 2, 3, 4},
+	// 	"cli.hosts":      []serverInfo{{"defaultIp1", "defaultDc1"}},
+	// }
+	// fmt.Printf("result:%+v\n", valmap)
+	// for k, v := range valmap {
+	// 	fmt.Printf("check:%+v and %+v, equal %+v\n", checkValmap[k], v, v == checkValmap[k])
+	// }
+
 }
