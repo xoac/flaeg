@@ -167,4 +167,7 @@ func (t *timeValue) Set(s string) error {
 	*t = timeValue(v)
 	return err
 }
+
+func (t *timeValue) Get() interface{} { return time.Time(*t) }
+
 func (t *timeValue) String() string { return (*time.Time)(t).String() }

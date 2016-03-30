@@ -78,7 +78,7 @@ func TestGetTypesRecursive(t *testing.T) {
 
 func TestParseArgs(t *testing.T) {
 	//creating parsers
-	parsers := map[reflect.Type]flag.Value{}
+	parsers := map[reflect.Type]flag.Getter{}
 	var myStringParser stringValue
 	var myBoolParser boolValue
 	var myIntParser intValue
@@ -121,49 +121,61 @@ func TestParseArgs(t *testing.T) {
 		"-servers.ip", "myServersIp",
 		"-servers.dc", "myServersDc",
 	}
-	pargs, err := parseArgs(args, tagsmap, nil, parsers)
+	pargs, err := parseArgs(args, tagsmap, parsers)
 	if err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
-	fmt.Printf("result:%+v\n", pargs)
+	// fmt.Printf("result:%+v\n", pargs)
 
 	//CHECK
-	myTime, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
-	checkParse := map[string]interface{}{
+
+	cliHostsCheck := sliceServerValue([]serverInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}})
+	tCheck := stringValue("myTitle")
+	cliDataCheck := customValue([]int{1, 2, 3, 4})
+	ownNameCheck := stringValue("myOwnName")
+	ownBioCheck := stringValue("myOwnBio")
+	dob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
+	ownDobCheck := timeValue(dob)
+	databaseSrvCheck := stringValue("mySrv")
+	databaseComaxCheck := intValue(1000)
+	ownOrgCheck := stringValue("myOwnOrg")
+	databaseEnaCheck := boolValue(true)
+	serversIPCheck := stringValue("myServersIp")
+	serversDcCheck := stringValue("myServersDc")
+
+	checkParse := map[string]flag.Getter{
 
 		// "title", "myTitle",
 		// "own",
 		// "cli":
-		"cli.hosts": sliceServerValue([]serverInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}),
-		"t":         stringValue("myTitle"),
+		"cli.hosts": &cliHostsCheck,
+		"t":         &tCheck,
 		// "database",""
-		"cli.data": customValue([]int{1, 2, 3, 4}),
+		"cli.data": &cliDataCheck,
 		// "cli.hosts",""
-		"own.name":       stringValue("myOwnName"),
-		"own.bio":        stringValue("myOwnBio"),
-		"own.dob":        timeValue(myTime),
-		"database.srv":   stringValue("mySrv"),
-		"database.comax": intValue(1000),
+		"own.name":       &ownNameCheck,
+		"own.bio":        &ownBioCheck,
+		"own.dob":        &ownDobCheck,
+		"database.srv":   &databaseSrvCheck,
+		"database.comax": &databaseComaxCheck,
 		// "servers":
-		"own.org":      stringValue("myOwnOrg"),
-		"database.ena": boolValue(true), //=true"
-		"servers.ip":   stringValue("myServersIp"),
-		"servers.dc":   stringValue("myServersDc"),
+		"own.org":      &ownOrgCheck,
+		"database.ena": &databaseEnaCheck, //=true"
+		"servers.ip":   &serversIPCheck,
+		"servers.dc":   &serversDcCheck,
 	}
+
 	for tag, inter := range pargs {
-		if checkParse[tag] != nil {
-			v1 := reflect.ValueOf(checkParse[tag])
-			v2 := reflect.ValueOf(inter).Elem()
-			if !reflect.DeepEqual(v1.Interface(), v2.Interface()) {
-				t.Fatalf("Error tag %s : expected %+v got %+v", tag, v1, v2)
-			}
+
+		if !reflect.DeepEqual(checkParse[tag].Get(), inter.Get()) {
+			t.Fatalf("Error tag %s : expected %+v got %+v", tag, checkParse[tag].Get(), inter.Get())
 		}
 	}
 }
 
 func TestFillStructRecursive(t *testing.T) {
 	//creating parsers
-	parsers := map[reflect.Type]flag.Value{}
+	parsers := map[reflect.Type]flag.Getter{}
 	var myStringParser stringValue
 	var myBoolParser boolValue
 	var myIntParser intValue
@@ -209,7 +221,7 @@ func TestFillStructRecursive(t *testing.T) {
 		"-cli.data", "4",
 	}
 
-	pargs, err := parseArgs(args, tagsmap, nil, parsers)
+	pargs, err := parseArgs(args, tagsmap, parsers)
 	if err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -256,6 +268,8 @@ func (c *customValue) Set(s string) error {
 	return nil
 }
 
+func (c *customValue) Get() interface{} { return []int(*c) }
+
 func (c *customValue) String() string { return fmt.Sprintf("%v", *c) }
 
 // -- sliceIntValue
@@ -269,6 +283,8 @@ func (c *sliceIntValue) Set(s string) error {
 	*c = append(*c, v)
 	return nil
 }
+
+func (c *sliceIntValue) Get() interface{} { return []int(*c) }
 
 func (c *sliceIntValue) String() string { return fmt.Sprintf("%v", *c) }
 
@@ -285,11 +301,13 @@ func (c *sliceServerValue) Set(s string) error {
 	return nil
 }
 
+func (c *sliceServerValue) Get() interface{} { return []serverInfo(*c) }
+
 func (c *sliceServerValue) String() string { return fmt.Sprintf("%v", *c) }
 
 func TestLoadParsers(t *testing.T) {
 	//creating parsers
-	customParsers := map[reflect.Type]flag.Value{}
+	customParsers := map[reflect.Type]flag.Getter{}
 	var mySliceIntParser sliceIntValue
 	var mySliceServerParser sliceServerValue
 	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
@@ -301,7 +319,7 @@ func TestLoadParsers(t *testing.T) {
 	}
 
 	//check
-	check := map[reflect.Type]flag.Value{}
+	check := map[reflect.Type]flag.Getter{}
 	check[reflect.TypeOf([]int{})] = &mySliceIntParser
 	check[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
 	var stringParser stringValue
@@ -321,7 +339,7 @@ func TestLoadParsers(t *testing.T) {
 
 func TestLoad(t *testing.T) {
 	//creating parsers
-	customParsers := map[reflect.Type]flag.Value{}
+	customParsers := map[reflect.Type]flag.Getter{}
 	var mySliceIntParser sliceIntValue
 	var mySliceServerParser sliceServerValue
 	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
@@ -369,66 +387,4 @@ func TestLoad(t *testing.T) {
 	if !reflect.DeepEqual(ex1, check) {
 		t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check, ex1)
 	}
-}
-
-func TestGetStructRecursive(t *testing.T) {
-	//creating parsers
-	customParsers := map[reflect.Type]flag.Value{}
-	var mySliceIntParser sliceIntValue
-	var mySliceServerParser sliceServerValue
-	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
-	customParsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
-	parsers, err := loadParsers(customParsers)
-	if err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-
-	//test all
-	var ex example
-	ex.Title = "defaultTitle"
-	ex.Owner.Name = "defaultName"
-	ex.Owner.Organization = "defaultOrg"
-	ex.Owner.Bio = "defaultBio"
-	ex.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
-	ex.Database.Server = "defaultSrv"
-	ex.Database.ConnectionMax = 1111
-	ex.Database.Enable = false
-	ex.Servers.IP = "defaultServersIp"
-	ex.Servers.Dc = "defaultServersDc"
-	ex.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}
-	valmap, err := getStructRecursive(reflect.ValueOf(&ex), parsers, "")
-	if err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-	fmt.Printf("valmap:%s\n", valmap)
-
-	//CHECK
-	// defaultTime, err := time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
-	// if err != nil {
-	// 	t.Errorf("Error %s", err.Error())
-	// }
-	// checkValmap := map[string]interface{}{
-	// 	"t":              "defaultTitle",
-	// 	"title":          "defaultTitle",
-	// 	"own":            ownerInfo{"defaultName", "defaultOrg", "defaultBio", defaultTime},
-	// 	"own.name":       "defaultName",
-	// 	"own.org":        "defaultOrg",
-	// 	"own.bio":        "defaultBio",
-	// 	"own.dob":        defaultTime,
-	// 	"database":       databaseInfo{},
-	// 	"database.srv":   "defaultSrv",
-	// 	"database.comax": 1111,
-	// 	"database.ena":   false,
-	// 	"servers":        serverInfo{"defaultServersIp", "defaultServersDc"},
-	// 	"servers.ip":     "defaultServersIp",
-	// 	"servers.dc":     "defaultServersDc",
-	// 	"cli":            nil,
-	// 	"cli.data":       []int{1, 2, 3, 4},
-	// 	"cli.hosts":      []serverInfo{{"defaultIp1", "defaultDc1"}},
-	// }
-	// fmt.Printf("result:%+v\n", valmap)
-	// for k, v := range valmap {
-	// 	fmt.Printf("check:%+v and %+v, equal %+v\n", checkValmap[k], v, v == checkValmap[k])
-	// }
-
 }
