@@ -114,12 +114,31 @@ func fillStructRecursive(objValue reflect.Value, defaultValue reflect.Value, val
 						if err := setFields(objValue.Field(i), valmap[strings.ToLower(tag)]); err != nil {
 							return err
 						}
+					} else {
+						contains := false
+						for flag := range valmap {
+							if strings.Contains(flag, strings.ToLower(name)+".") {
+								contains = true
+								break
+							}
+						}
+						if contains {
+							if err := fillStructRecursive(objValue.Field(i), defaultValue.Field(i), valmap, name); err != nil {
+								return err
+							}
+						} else {
+							// fmt.Printf("Flag %s : No arg found, using default value %+v\n", strings.ToLower(name)+".", defaultValue.Field(i))
+							if objValue.Field(i).CanSet() {
+								objValue.Field(i).Set(defaultValue.Field(i))
+							} else {
+								return errors.New(objValue.Field(i).Type().String() + " is not settable.")
+							}
+
+						}
+
 					}
 				}
 
-				if err := fillStructRecursive(objValue.Field(i), defaultValue.Field(i), valmap, name); err != nil {
-					return err
-				}
 			}
 		}
 	case reflect.Ptr:

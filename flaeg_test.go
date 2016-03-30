@@ -199,22 +199,22 @@ func TestFillStructRecursive(t *testing.T) {
 	args := []string{
 		// "-title", "myTitle",
 		// "own",
-		// "cli":
+		// "-cli",
 		"-cli.hosts", "{myIp1,myDc1}",
 		"-t", "myTitle",
 		// "-database",""
 		// "-cli.hosts",""
 		"-cli.hosts", "{myIp2,myDc2}",
 		"-own.name", "myOwnName",
-		"-own.bio", "myOwnBio",
+		// "-own.bio", "myOwnBio",
 		"-own.dob", "1979-05-27T07:32:00Z",
 		"-database.srv", "mySrv",
 		"-database.comax", "1000",
 		// "-servers":
 		"-own.org", "myOwnOrg",
 		"-database.ena", //=true"
-		"-servers.ip", "myServersIp",
-		"-servers.dc", "myServersDc",
+		// "-servers.ip", "myServersIp",
+		// "-servers.dc", "myServersDc",
 		"-cli.data", "1",
 		"-cli.data", "2",
 		"-cli.data", "3",
@@ -248,15 +248,18 @@ func TestFillStructRecursive(t *testing.T) {
 	check.Title = "myTitle"
 	check.Owner.Name = "myOwnName"
 	check.Owner.Organization = "myOwnOrg"
-	check.Owner.Bio = "myOwnBio"
+	check.Owner.Bio = "defaultBio"
 	check.Owner.Dob, _ = time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	check.Database.Server = "mySrv"
 	check.Database.ConnectionMax = 1000
 	check.Database.Enable = true
-	check.Servers.IP = "myServersIp"
-	check.Servers.Dc = "myServersDc"
+	check.Servers.IP = "defaultServersIp"
+	check.Servers.Dc = "defaultServersDc"
 	check.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []serverInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}}
 	if !reflect.DeepEqual(ex1, check) {
+		if !reflect.DeepEqual(ex1.Clients, check.Clients) {
+			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Clients, ex1.Clients)
+		}
 		t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check, ex1)
 	}
 
