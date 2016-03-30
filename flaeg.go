@@ -86,23 +86,16 @@ func parseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[refle
 }
 
 //FillStructRecursive initialize a value of any taged Struct given by reference
-func fillStructRecursive(objValue reflect.Value, valmap map[string]flag.Getter, key string) error {
+func fillStructRecursive(objValue reflect.Value, defaultValue reflect.Value, valmap map[string]flag.Getter, key string) error {
 	name := key
 	// fmt.Printf("objValue begin : %+v\n", objValue)
 	switch objValue.Kind() {
 	case reflect.Struct:
 		name += objValue.Type().Name()
-		// inst := reflect.New(objValue.Type()).Elem()
-		// for i := 0; i < inst.NumField(); i++ {
 		for i := 0; i < objValue.Type().NumField(); i++ {
 			if tag := objValue.Type().Field(i).Tag.Get("description"); len(tag) > 0 {
 				fieldName := objValue.Type().Field(i).Name
-				if tag := objValue.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
-					if err := setFields(objValue.Field(i), valmap, strings.ToLower(tag)); err != nil {
-						return err
-					}
 
-				}
 				if tag := objValue.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
 					fieldName = tag
 				}
@@ -112,10 +105,19 @@ func fillStructRecursive(objValue reflect.Value, valmap map[string]flag.Getter, 
 					name = key + "." + fieldName
 				}
 				// fmt.Printf("tag : %s\n", name)
-				if err := setFields(objValue.Field(i), valmap, strings.ToLower(name)); err != nil {
-					return err
+				if val, ok := valmap[strings.ToLower(name)]; ok {
+					if err := setFields(objValue.Field(i), val); err != nil {
+						return err
+					}
+				} else {
+					if tag := objValue.Type().Field(i).Tag.Get("short"); len(tag) > 0 && valmap[strings.ToLower(tag)] != nil {
+						if err := setFields(objValue.Field(i), valmap[strings.ToLower(tag)]); err != nil {
+							return err
+						}
+					}
 				}
-				if err := fillStructRecursive(objValue.Field(i), valmap, name); err != nil {
+
+				if err := fillStructRecursive(objValue.Field(i), defaultValue.Field(i), valmap, name); err != nil {
 					return err
 				}
 			}
@@ -123,12 +125,12 @@ func fillStructRecursive(objValue reflect.Value, valmap map[string]flag.Getter, 
 	case reflect.Ptr:
 		if objValue.IsNil() {
 			inst := reflect.New(objValue.Type().Elem())
-			if err := fillStructRecursive(inst.Elem(), valmap, name); err != nil {
+			if err := fillStructRecursive(inst.Elem(), defaultValue.Elem(), valmap, name); err != nil {
 				return err
 			}
 			objValue.Set(inst)
 		} else {
-			if err := fillStructRecursive(objValue.Elem(), valmap, name); err != nil {
+			if err := fillStructRecursive(objValue.Elem(), defaultValue.Elem(), valmap, name); err != nil {
 				return err
 			}
 		}
@@ -140,18 +142,15 @@ func fillStructRecursive(objValue reflect.Value, valmap map[string]flag.Getter, 
 }
 
 // SetFields sets value to fieldValue using tag as key in valmap
-func setFields(fieldValue reflect.Value, valmap map[string]flag.Getter, tag string) error {
-	if reflect.DeepEqual(fieldValue.Interface(), reflect.New(fieldValue.Type()).Elem().Interface()) {
-		if fieldValue.CanSet() {
-			if val, ok := valmap[tag]; ok {
-				// fmt.Printf("tag %s : set %s in a %s\n", tag, val, fieldValue.Kind())
-				fieldValue.Set(reflect.ValueOf(val).Elem().Convert(fieldValue.Type()))
-			}
-		} else {
-			return errors.New(fieldValue.Type().String() + " is not settable.")
-		}
-
+func setFields(fieldValue reflect.Value, val flag.Getter) error {
+	// if reflect.DeepEqual(fieldValue.Interface(), reflect.New(fieldValue.Type()).Elem().Interface()) {
+	if fieldValue.CanSet() {
+		fieldValue.Set(reflect.ValueOf(val).Elem().Convert(fieldValue.Type()))
+	} else {
+		return errors.New(fieldValue.Type().String() + " is not settable.")
 	}
+
+	// }
 	return nil
 }
 
@@ -174,7 +173,7 @@ func loadParsers(customParsers map[reflect.Type]flag.Getter) (map[reflect.Type]f
 
 //Load initializes config : struct fields given by reference, with args : arguments.
 //Some custom parsers may be given.
-func Load(config interface{}, args []string, customParsers map[reflect.Type]flag.Getter) error {
+func Load(config interface{}, defaultValue interface{}, args []string, customParsers map[reflect.Type]flag.Getter) error {
 	parsers, err := loadParsers(customParsers)
 	if err != nil {
 		return err
@@ -187,7 +186,7 @@ func Load(config interface{}, args []string, customParsers map[reflect.Type]flag
 	if err != nil {
 		return err
 	}
-	if err := fillStructRecursive(reflect.ValueOf(config), valmap, ""); err != nil {
+	if err := fillStructRecursive(reflect.ValueOf(config), reflect.ValueOf(defaultValue), valmap, ""); err != nil {
 		return err
 	}
 

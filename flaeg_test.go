@@ -226,7 +226,20 @@ func TestFillStructRecursive(t *testing.T) {
 		t.Errorf("Error %s", err.Error())
 	}
 
-	if err := fillStructRecursive(reflect.ValueOf(&ex1), pargs, ""); err != nil {
+	var defaultEx example
+	defaultEx.Title = "defaultTitle"
+	defaultEx.Owner.Name = "defaultName"
+	defaultEx.Owner.Organization = "defaultOrg"
+	defaultEx.Owner.Bio = "defaultBio"
+	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
+	defaultEx.Database.Server = "defaultSrv"
+	defaultEx.Database.ConnectionMax = 1111
+	defaultEx.Database.Enable = false
+	defaultEx.Servers.IP = "defaultServersIp"
+	defaultEx.Servers.Dc = "defaultServersDc"
+	defaultEx.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}
+
+	if err := fillStructRecursive(reflect.ValueOf(&ex1), reflect.ValueOf(&defaultEx), pargs, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -368,7 +381,20 @@ func TestLoad(t *testing.T) {
 	//Test all
 	var ex1 example
 
-	if err := Load(&ex1, args, customParsers); err != nil {
+	var defaultEx example
+	defaultEx.Title = "defaultTitle"
+	defaultEx.Owner.Name = "defaultName"
+	defaultEx.Owner.Organization = "defaultOrg"
+	defaultEx.Owner.Bio = "defaultBio"
+	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
+	defaultEx.Database.Server = "defaultSrv"
+	defaultEx.Database.ConnectionMax = 1111
+	defaultEx.Database.Enable = false
+	defaultEx.Servers.IP = "defaultServersIp"
+	defaultEx.Servers.Dc = "defaultServersDc"
+	defaultEx.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}
+
+	if err := Load(&ex1, &defaultEx, args, customParsers); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 	//CHECK
