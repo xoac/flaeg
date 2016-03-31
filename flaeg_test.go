@@ -417,3 +417,55 @@ func TestLoad(t *testing.T) {
 		t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check, ex1)
 	}
 }
+
+func TestFlagPrintDefaults(t *testing.T) {
+	//creating parsers
+	parsers := map[reflect.Type]flag.Getter{}
+	var myStringParser stringValue
+	var myBoolParser boolValue
+	var myIntParser intValue
+	var myCustomParser customValue
+	var mySliceServerParser sliceServerValue
+	var myTimeParser timeValue
+	parsers[reflect.TypeOf("")] = &myStringParser
+	parsers[reflect.TypeOf(true)] = &myBoolParser
+	parsers[reflect.TypeOf(1)] = &myIntParser
+	parsers[reflect.TypeOf([]int{})] = &myCustomParser
+	parsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
+	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
+
+	//Test all
+	var ex1 example
+	tagsmap := make(map[string]reflect.StructField)
+
+	if err := getTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	args := []string{
+		// "-title", "myTitle",
+		"-noFlag",
+		// "cli":
+		"-cli.hosts", "{myIp1,myDc1}",
+		"-t", "myTitle",
+		// "-database",""
+		"-cli.data", "{1,2,3,4}",
+		// "-cli.hosts",""
+		"-cli.hosts", "{myIp2,myDc2}",
+		"-own.name", "myOwnName",
+		"-own.bio", "myOwnBio",
+		"-own.dob", "1979-05-27T07:32:00Z",
+		"-database.srv", "mySrv",
+		"-database.comax", "1000",
+		// "-servers":
+		"-own.org", "myOwnOrg",
+		"-database.ena", //=true"
+		"-servers.ip", "myServersIp",
+		"-servers.dc", "myServersDc",
+	}
+	_, err := parseArgs(args, tagsmap, parsers)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+}

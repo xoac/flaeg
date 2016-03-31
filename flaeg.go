@@ -17,7 +17,7 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.Struct
 	case reflect.Struct:
 		name += objValue.Type().Name()
 		for i := 0; i < objValue.NumField(); i++ {
-			if tag := objValue.Type().Field(i).Tag.Get("description"); len(tag) > 0 {
+			if len(objValue.Type().Field(i).Tag.Get("description")) > 0 {
 				fieldName := objValue.Type().Field(i).Name
 				if tag := objValue.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
 					fieldName = tag
@@ -82,7 +82,7 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 		flagList = append(flagList, fl)
 	}
 	newParsers := map[string]flag.Getter{}
-	flagSet := flag.NewFlagSet("flaeg.ParseArgs", flag.ExitOnError)
+	flagSet := flag.NewFlagSet("flaeg.Load", flag.ExitOnError)
 	for tag, structField := range flagmap {
 
 		if parser, ok := parsers[structField.Type]; ok {
