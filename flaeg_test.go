@@ -42,7 +42,7 @@ type example struct {
 func TestGetTypesRecursive(t *testing.T) {
 	//Test all
 	var ex1 example
-	namesmap := make(map[string]reflect.Type)
+	namesmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(&ex1), namesmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -68,9 +68,9 @@ func TestGetTypesRecursive(t *testing.T) {
 		"servers.ip":     reflect.TypeOf(""),
 		"servers.dc":     reflect.TypeOf(""),
 	}
-	for name, nameType := range namesmap {
-		if checkType[name] != nameType {
-			t.Fatalf("Tag : %s, got %s expected %s\n", name, nameType, checkType[name])
+	for name, field := range namesmap {
+		if checkType[name] != field.Type {
+			t.Fatalf("Tag : %s, got %s expected %s\n", name, field.Type, checkType[name])
 		}
 	}
 
@@ -94,7 +94,7 @@ func TestParseArgs(t *testing.T) {
 
 	//Test all
 	var ex1 example
-	tagsmap := make(map[string]reflect.Type)
+	tagsmap := make(map[string]reflect.StructField)
 
 	if err := getTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
@@ -191,7 +191,7 @@ func TestFillStructRecursive(t *testing.T) {
 
 	//Test all
 	var ex1 example
-	tagsmap := make(map[string]reflect.Type)
+	tagsmap := make(map[string]reflect.StructField)
 
 	if err := getTypesRecursive(reflect.ValueOf(&ex1), tagsmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())

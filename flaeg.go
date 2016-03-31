@@ -8,10 +8,10 @@ import (
 	"time"
 )
 
-// GetTypesRecursive links in namesmap a flag with there flildstruct Type
+// GetTypesRecursive links in flagmap a flag with its StructField
 // You can whether provide objValue on a structure or a pointer to structure as first argument
-// Flags are genereted from field name or from structags
-func getTypesRecursive(objValue reflect.Value, namesmap map[string]reflect.Type, key string) error {
+// Flags are genereted from field name or from StructTag
+func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.StructField, key string) error {
 	name := key
 	switch objValue.Kind() {
 	case reflect.Struct:
@@ -23,39 +23,47 @@ func getTypesRecursive(objValue reflect.Value, namesmap map[string]reflect.Type,
 					fieldName = tag
 				}
 				if tag := objValue.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
-					if _, ok := namesmap[strings.ToLower(tag)]; ok {
+					if _, ok := flagmap[strings.ToLower(tag)]; ok {
 						return errors.New("Tag already exists: " + tag)
 					}
-					namesmap[strings.ToLower(tag)] = objValue.Field(i).Type()
+					flagmap[strings.ToLower(tag)] = objValue.Type().Field(i)
 				}
 				if len(key) == 0 {
 					name = fieldName
 				} else {
 					name = key + "." + fieldName
 				}
-				if _, ok := namesmap[strings.ToLower(name)]; ok {
+				if _, ok := flagmap[strings.ToLower(name)]; ok {
 					return errors.New("Tag already exists: " + name)
 				}
-				namesmap[strings.ToLower(name)] = objValue.Field(i).Type()
-				if err := getTypesRecursive(objValue.Field(i), namesmap, name); err != nil {
+				flagmap[strings.ToLower(name)] = objValue.Type().Field(i)
+				if err := getTypesRecursive(objValue.Field(i), flagmap, name); err != nil {
 					return err
 				}
 			}
 		}
 	case reflect.Ptr:
 		if len(key) > 0 {
-			namesmap[strings.ToLower(name)] = reflect.TypeOf(false)
+			flagmap[strings.ToLower(name)] = reflect.StructField{
+				flagmap[strings.ToLower(name)].Name,
+				flagmap[strings.ToLower(name)].PkgPath,
+				reflect.TypeOf(false),
+				flagmap[strings.ToLower(name)].Tag,
+				flagmap[strings.ToLower(name)].Offset,
+				flagmap[strings.ToLower(name)].Index,
+				flagmap[strings.ToLower(name)].Anonymous,
+			}
 		}
 		typ := objValue.Type().Elem()
 		inst := reflect.New(typ).Elem()
-		if err := getTypesRecursive(inst, namesmap, name); err != nil {
+		if err := getTypesRecursive(inst, flagmap, name); err != nil {
 			return err
 		}
 
 	case reflect.Array, reflect.Map, reflect.Slice:
 		typ := objValue.Type().Elem()
 		inst := reflect.New(typ).Elem()
-		if err := getTypesRecursive(inst, namesmap, name); err != nil {
+		if err := getTypesRecursive(inst, flagmap, name); err != nil {
 			return err
 		}
 	default:
@@ -64,9 +72,10 @@ func getTypesRecursive(objValue reflect.Value, namesmap map[string]reflect.Type,
 	return nil
 }
 
-//ParseArgs : parses args into a map[tag]value, using map[type]parser
+//ParseArgs : parses args return valmap map[flag]Getter, using parsers map[type]Getter
 //args must be formated as like as flag documentation. See https://golang.org/pkg/flag
-func parseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[reflect.Type]flag.Getter) (map[string]flag.Getter, error) {
+func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers map[reflect.Type]flag.Getter) (map[string]flag.Getter, error) {
+	valmap := make(map[string]flag.Getter)
 	flagList := []*flag.Flag{}
 	visitor := func(fl *flag.Flag) {
 		// fmt.Printf("inside : %s\n", fl.Name)
@@ -74,12 +83,12 @@ func parseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[refle
 	}
 	newParsers := map[string]flag.Getter{}
 	flagSet := flag.NewFlagSet("flaeg.ParseArgs", flag.ExitOnError)
-	valmap := make(map[string]flag.Getter)
-	for tag, rType := range tagsmap {
+	for tag, structField := range flagmap {
 
-		if parser, ok := parsers[rType]; ok {
+		if parser, ok := parsers[structField.Type]; ok {
 			newparser := reflect.New(reflect.TypeOf(parser).Elem()).Interface().(flag.Getter)
-			flagSet.Var(newparser, tag, "help")
+			// fmt.Printf("help to print : %s\n", structField.Tag.Get("description"))
+			flagSet.Var(newparser, tag, structField.Tag.Get("description"))
 			newParsers[tag] = newparser
 		}
 	}
@@ -223,7 +232,7 @@ func Load(config interface{}, defaultValue interface{}, args []string, customPar
 	if err != nil {
 		return err
 	}
-	tagsmap := make(map[string]reflect.Type)
+	tagsmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), tagsmap, ""); err != nil {
 		return err
 	}
