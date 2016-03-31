@@ -50,7 +50,7 @@ func TestGetTypesRecursive(t *testing.T) {
 	checkType := map[string]reflect.Type{
 		"title":          reflect.TypeOf(""),
 		"own":            reflect.TypeOf(ownerInfo{}),
-		"cli":            reflect.TypeOf(&clientInfo{}),
+		"cli":            reflect.TypeOf(true),
 		"cli.hosts.ip":   reflect.TypeOf(""),
 		"t":              reflect.TypeOf(""),
 		"database":       reflect.TypeOf(databaseInfo{}),
@@ -215,10 +215,10 @@ func TestFillStructRecursive(t *testing.T) {
 		"-database.ena", //=true"
 		// "-servers.ip", "myServersIp",
 		// "-servers.dc", "myServersDc",
-		"-cli.data", "1",
-		"-cli.data", "2",
-		"-cli.data", "3",
-		"-cli.data", "4",
+		// "-cli.data", "1",
+		// "-cli.data", "2",
+		// "-cli.data", "3",
+		// "-cli.data", "4",
 	}
 
 	pargs, err := parseArgs(args, tagsmap, parsers)
@@ -237,7 +237,7 @@ func TestFillStructRecursive(t *testing.T) {
 	defaultEx.Database.Enable = false
 	defaultEx.Servers.IP = "defaultServersIp"
 	defaultEx.Servers.Dc = "defaultServersDc"
-	defaultEx.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}
+	defaultEx.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}
 
 	if err := fillStructRecursive(reflect.ValueOf(&ex1), reflect.ValueOf(&defaultEx), pargs, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
@@ -255,7 +255,7 @@ func TestFillStructRecursive(t *testing.T) {
 	check.Database.Enable = true
 	check.Servers.IP = "defaultServersIp"
 	check.Servers.Dc = "defaultServersDc"
-	check.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []serverInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}}
+	check.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}}
 	if !reflect.DeepEqual(ex1, check) {
 		if !reflect.DeepEqual(ex1.Clients, check.Clients) {
 			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Clients, ex1.Clients)

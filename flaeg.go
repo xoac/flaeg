@@ -42,7 +42,17 @@ func getTypesRecursive(objValue reflect.Value, namesmap map[string]reflect.Type,
 				}
 			}
 		}
-	case reflect.Array, reflect.Map, reflect.Slice, reflect.Ptr:
+	case reflect.Ptr:
+		if len(key) > 0 {
+			namesmap[strings.ToLower(name)] = reflect.TypeOf(false)
+		}
+		typ := objValue.Type().Elem()
+		inst := reflect.New(typ).Elem()
+		if err := getTypesRecursive(inst, namesmap, name); err != nil {
+			return err
+		}
+
+	case reflect.Array, reflect.Map, reflect.Slice:
 		typ := objValue.Type().Elem()
 		inst := reflect.New(typ).Elem()
 		if err := getTypesRecursive(inst, namesmap, name); err != nil {
@@ -88,14 +98,14 @@ func parseArgs(args []string, tagsmap map[string]reflect.Type, parsers map[refle
 //FillStructRecursive initialize a value of any taged Struct given by reference
 func fillStructRecursive(objValue reflect.Value, defaultValue reflect.Value, valmap map[string]flag.Getter, key string) error {
 	name := key
-	// fmt.Printf("objValue begin : %+v\n", objValue)
 	switch objValue.Kind() {
+
 	case reflect.Struct:
 		name += objValue.Type().Name()
 		for i := 0; i < objValue.Type().NumField(); i++ {
 			if tag := objValue.Type().Field(i).Tag.Get("description"); len(tag) > 0 {
-				fieldName := objValue.Type().Field(i).Name
 
+				fieldName := objValue.Type().Field(i).Name
 				if tag := objValue.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
 					fieldName = tag
 				}
@@ -104,7 +114,14 @@ func fillStructRecursive(objValue reflect.Value, defaultValue reflect.Value, val
 				} else {
 					name = key + "." + fieldName
 				}
-				// fmt.Printf("tag : %s\n", name)
+
+				if objValue.Field(i).Kind() == reflect.Ptr {
+					if err := fillStructRecursive(objValue.Field(i), defaultValue.Field(i), valmap, name); err != nil {
+						return err
+					}
+					return nil
+				}
+
 				if val, ok := valmap[strings.ToLower(name)]; ok {
 					if err := setFields(objValue.Field(i), val); err != nil {
 						return err
@@ -115,48 +132,57 @@ func fillStructRecursive(objValue reflect.Value, defaultValue reflect.Value, val
 							return err
 						}
 					} else {
-						contains := false
-						for flag := range valmap {
-							if strings.Contains(flag, strings.ToLower(name)+".") {
-								contains = true
-								break
-							}
-						}
-						if contains {
-							if err := fillStructRecursive(objValue.Field(i), defaultValue.Field(i), valmap, name); err != nil {
-								return err
-							}
+						if objValue.Field(i).CanSet() {
+							objValue.Field(i).Set(defaultValue.Field(i))
 						} else {
-							// fmt.Printf("Flag %s : No arg found, using default value %+v\n", strings.ToLower(name)+".", defaultValue.Field(i))
-							if objValue.Field(i).CanSet() {
-								objValue.Field(i).Set(defaultValue.Field(i))
-							} else {
-								return errors.New(objValue.Field(i).Type().String() + " is not settable.")
-							}
-
+							return errors.New(objValue.Field(i).Type().String() + " is not settable.")
 						}
-
+						if err := fillStructRecursive(objValue.Field(i), defaultValue.Field(i), valmap, name); err != nil {
+							return err
+						}
 					}
 				}
-
 			}
 		}
+
 	case reflect.Ptr:
 		if objValue.IsNil() {
-			inst := reflect.New(objValue.Type().Elem())
-			if err := fillStructRecursive(inst.Elem(), defaultValue.Elem(), valmap, name); err != nil {
-				return err
+			contains := false
+
+			if _, ok := valmap[strings.ToLower(name)]; !ok {
+				for flag := range valmap {
+					// TODO replace by regexp
+					if strings.Contains(flag, strings.ToLower(name)+".") {
+						contains = true
+						break
+					}
+				}
+			} else {
+				contains = true
 			}
-			objValue.Set(inst)
+
+			if contains {
+				inst := reflect.New(objValue.Type().Elem())
+				if inst.Elem().CanSet() {
+					inst.Elem().Set(defaultValue.Elem())
+				} else {
+					return errors.New(inst.Elem().Type().String() + " is not settable.")
+				}
+				if err := fillStructRecursive(inst.Elem(), defaultValue.Elem(), valmap, name); err != nil {
+					return err
+				}
+				objValue.Set(inst)
+			}
+
 		} else {
 			if err := fillStructRecursive(objValue.Elem(), defaultValue.Elem(), valmap, name); err != nil {
 				return err
 			}
 		}
+
 	default:
 		return nil
 	}
-	// fmt.Printf("objValue end : %+v\n", objValue)
 	return nil
 }
 
