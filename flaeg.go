@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"reflect"
 	"strings"
 	"time"
@@ -44,6 +46,7 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.Struct
 		}
 	case reflect.Ptr:
 		if len(key) > 0 {
+			//TODO : short tag
 			flagmap[strings.ToLower(name)] = reflect.StructField{
 				flagmap[strings.ToLower(name)].Name,
 				flagmap[strings.ToLower(name)].PkgPath,
@@ -82,7 +85,8 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 		flagList = append(flagList, fl)
 	}
 	newParsers := map[string]flag.Getter{}
-	flagSet := flag.NewFlagSet("flaeg.Load", flag.ExitOnError)
+	flagSet := flag.NewFlagSet("flaeg.Load", flag.ContinueOnError)
+	flagSet.SetOutput(ioutil.Discard)
 	for tag, structField := range flagmap {
 
 		if parser, ok := parsers[structField.Type]; ok {
@@ -94,8 +98,13 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 	}
 
 	if err := flagSet.Parse(args); err != nil {
+		fmt.Printf("error:%+v\n", err)
+		if err == flag.ErrHelp {
+			fmt.Printf("HELP\n")
+		}
 		return nil, err
 	}
+
 	flagSet.Visit(visitor)
 	for _, flag := range flagList {
 		valmap[flag.Name] = newParsers[flag.Name]
@@ -105,7 +114,7 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 }
 
 //FillStructRecursive initialize a value of any taged Struct given by reference
-func fillStructRecursive(objValue reflect.Value, defaultValue reflect.Value, valmap map[string]flag.Getter, key string) error {
+func fillStructRecursive(objValue reflect.Value, defaultValmap map[string]reflect.Value, valmap map[string]flag.Getter, key string) error {
 	name := key
 	switch objValue.Kind() {
 
@@ -125,7 +134,7 @@ func fillStructRecursive(objValue reflect.Value, defaultValue reflect.Value, val
 				}
 
 				if objValue.Field(i).Kind() == reflect.Ptr {
-					if err := fillStructRecursive(objValue.Field(i), defaultValue.Field(i), valmap, name); err != nil {
+					if err := fillStructRecursive(objValue.Field(i), defaultValmap, valmap, name); err != nil {
 						return err
 					}
 					return nil
@@ -142,11 +151,11 @@ func fillStructRecursive(objValue reflect.Value, defaultValue reflect.Value, val
 						}
 					} else {
 						if objValue.Field(i).CanSet() {
-							objValue.Field(i).Set(defaultValue.Field(i))
+							objValue.Field(i).Set(defaultValmap[strings.ToLower(name)])
 						} else {
 							return errors.New(objValue.Field(i).Type().String() + " is not settable.")
 						}
-						if err := fillStructRecursive(objValue.Field(i), defaultValue.Field(i), valmap, name); err != nil {
+						if err := fillStructRecursive(objValue.Field(i), defaultValmap, valmap, name); err != nil {
 							return err
 						}
 					}
@@ -171,20 +180,14 @@ func fillStructRecursive(objValue reflect.Value, defaultValue reflect.Value, val
 			}
 
 			if contains {
-				inst := reflect.New(objValue.Type().Elem())
-				if inst.Elem().CanSet() {
-					inst.Elem().Set(defaultValue.Elem())
-				} else {
-					return errors.New(inst.Elem().Type().String() + " is not settable.")
-				}
-				if err := fillStructRecursive(inst.Elem(), defaultValue.Elem(), valmap, name); err != nil {
+				objValue.Set(defaultValmap[strings.ToLower(name)])
+				if err := fillStructRecursive(objValue.Elem(), defaultValmap, valmap, name); err != nil {
 					return err
 				}
-				objValue.Set(inst)
 			}
 
 		} else {
-			if err := fillStructRecursive(objValue.Elem(), defaultValue.Elem(), valmap, name); err != nil {
+			if err := fillStructRecursive(objValue.Elem(), defaultValmap, valmap, name); err != nil {
 				return err
 			}
 		}
@@ -240,9 +243,76 @@ func Load(config interface{}, defaultValue interface{}, args []string, customPar
 	if err != nil {
 		return err
 	}
-	if err := fillStructRecursive(reflect.ValueOf(config), reflect.ValueOf(defaultValue), valmap, ""); err != nil {
+	defaultValmap := make(map[string]reflect.Value)
+	if err := getDefaultValue(reflect.ValueOf(defaultValue), defaultValmap, ""); err != nil {
+		return err
+	}
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+//PrintError takes a not nil error and prints command line help
+func PrintError(err error) {
+	if err != flag.ErrHelp {
+		fmt.Printf("Error : %s\n", err)
+	}
+	PrintHelp()
+}
+
+//PrintHelp generates and prints command line help
+func PrintHelp() {
+	//
+}
+
+func getDefaultValue(defaultValue reflect.Value, defaultValmap map[string]reflect.Value, key string) error {
+
+	name := key
+	switch defaultValue.Kind() {
+	case reflect.Struct:
+		name += defaultValue.Type().Name()
+		for i := 0; i < defaultValue.NumField(); i++ {
+			if len(defaultValue.Type().Field(i).Tag.Get("description")) > 0 {
+				fieldName := defaultValue.Type().Field(i).Name
+				if tag := defaultValue.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
+					fieldName = tag
+				}
+				if tag := defaultValue.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
+					if _, ok := defaultValmap[strings.ToLower(tag)]; ok {
+						return errors.New("Tag already exists: " + tag)
+					}
+					defaultValmap[strings.ToLower(tag)] = defaultValue.Field(i)
+					// fmt.Printf("Gives val %+v to flag %s\n", defaultValue.Field(i), strings.ToLower(tag))
+				}
+				if len(key) == 0 {
+					name = fieldName
+				} else {
+					name = key + "." + fieldName
+				}
+				if _, ok := defaultValmap[strings.ToLower(name)]; ok {
+					return errors.New("Tag already exists: " + name)
+				}
+				defaultValmap[strings.ToLower(name)] = defaultValue.Field(i)
+				if err := getDefaultValue(defaultValue.Field(i), defaultValmap, name); err != nil {
+					return err
+				}
+			}
+		}
+	case reflect.Ptr:
+		if !defaultValue.IsNil() {
+			// if len(key) > 0 {
+			// 	//TODO : short tag
+			// 	//defaultValmap[strings.ToLower(name)] = reflect.New(defaultValue.Type())
+			// 	delete(defaultValmap, strings.ToLower(name))
+			// }
+			if err := getDefaultValue(defaultValue.Elem(), defaultValmap, name); err != nil {
+				return err
+			}
+		}
+	default:
+		return nil
+	}
 	return nil
 }

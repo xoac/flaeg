@@ -239,7 +239,12 @@ func TestFillStructRecursive(t *testing.T) {
 	defaultEx.Servers.Dc = "defaultServersDc"
 	defaultEx.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}
 
-	if err := fillStructRecursive(reflect.ValueOf(&ex1), reflect.ValueOf(&defaultEx), pargs, ""); err != nil {
+	defaultValmap := make(map[string]reflect.Value)
+	if err := getDefaultValue(reflect.ValueOf(&defaultEx), defaultValmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	if err := fillStructRecursive(reflect.ValueOf(&ex1), defaultValmap, pargs, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -418,54 +423,109 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-func TestFlagPrintDefaults(t *testing.T) {
-	//creating parsers
-	parsers := map[reflect.Type]flag.Getter{}
-	var myStringParser stringValue
-	var myBoolParser boolValue
-	var myIntParser intValue
-	var myCustomParser customValue
-	var mySliceServerParser sliceServerValue
-	var myTimeParser timeValue
-	parsers[reflect.TypeOf("")] = &myStringParser
-	parsers[reflect.TypeOf(true)] = &myBoolParser
-	parsers[reflect.TypeOf(1)] = &myIntParser
-	parsers[reflect.TypeOf([]int{})] = &myCustomParser
-	parsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
-	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
-
+func TestGetDefaultValue(t *testing.T) {
 	//Test all
-	var ex1 example
-	tagsmap := make(map[string]reflect.StructField)
+	var defaultEx example
+	defaultEx.Title = "defaultTitle"
+	defaultEx.Owner.Name = "defaultName"
+	defaultEx.Owner.Organization = "defaultOrg"
+	defaultEx.Owner.Bio = "defaultBio"
+	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
+	defaultEx.Database.Server = "defaultSrv"
+	defaultEx.Database.ConnectionMax = 1111
+	defaultEx.Database.Enable = false
+	defaultEx.Servers.IP = "defaultServersIp"
+	defaultEx.Servers.Dc = "defaultServersDc"
+	defaultEx.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}
 
-	if err := getTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
+	defaultValmap := make(map[string]reflect.Value)
+	if err := getDefaultValue(reflect.ValueOf(&defaultEx), defaultValmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
+	// fmt.Printf("defaultValmap : %s\n", defaultValmap)
 
-	args := []string{
-		// "-title", "myTitle",
-		"-noFlag",
-		// "cli":
-		"-cli.hosts", "{myIp1,myDc1}",
-		"-t", "myTitle",
-		// "-database",""
-		"-cli.data", "{1,2,3,4}",
-		// "-cli.hosts",""
-		"-cli.hosts", "{myIp2,myDc2}",
-		"-own.name", "myOwnName",
-		"-own.bio", "myOwnBio",
-		"-own.dob", "1979-05-27T07:32:00Z",
-		"-database.srv", "mySrv",
-		"-database.comax", "1000",
-		// "-servers":
-		"-own.org", "myOwnOrg",
-		"-database.ena", //=true"
-		"-servers.ip", "myServersIp",
-		"-servers.dc", "myServersDc",
+	checkTime, _ := time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
+	checkValue := map[string]reflect.Value{
+		"title":          reflect.ValueOf("defaultTitle"),
+		"own":            reflect.ValueOf(ownerInfo{"defaultName", "defaultOrg", "defaultBio", checkTime}),
+		"cli":            reflect.ValueOf(&clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}),
+		"cli.hosts.ip":   reflect.ValueOf(""),
+		"t":              reflect.ValueOf("defaultTitle"),
+		"database":       reflect.ValueOf(databaseInfo{"defaultSrv", 1111, false}),
+		"cli.data":       reflect.ValueOf([]int{4, 3, 2}),
+		"cli.hosts":      reflect.ValueOf([]serverInfo{{"defaultIp1", "defaultDc1"}}),
+		"cli.hosts.dc":   reflect.ValueOf(""),
+		"own.name":       reflect.ValueOf("defaultName"),
+		"own.bio":        reflect.ValueOf("defaultBio"),
+		"own.dob":        reflect.ValueOf(checkTime),
+		"database.srv":   reflect.ValueOf("defaultSrv"),
+		"database.comax": reflect.ValueOf(1111),
+		"servers":        reflect.ValueOf(serverInfo{"defaultServersIp", "defaultServersDc"}),
+		"own.org":        reflect.ValueOf("defaultOrg"),
+		"database.ena":   reflect.ValueOf(false),
+		"servers.ip":     reflect.ValueOf("defaultServersIp"),
+		"servers.dc":     reflect.ValueOf("defaultServersDc"),
 	}
-	_, err := parseArgs(args, tagsmap, parsers)
-	if err != nil {
-		t.Errorf("Error %s", err.Error())
+	for flag, defaultVal := range defaultValmap {
+		if !reflect.DeepEqual(checkValue[flag].Interface(), defaultVal.Interface()) {
+			t.Fatalf("Error flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], defaultVal)
+		}
 	}
 
 }
+
+// func TestFlagPrintDefaults(t *testing.T) {
+// 	//creating parsers
+// 	parsers := map[reflect.Type]flag.Getter{}
+// 	var myStringParser stringValue
+// 	var myBoolParser boolValue
+// 	var myIntParser intValue
+// 	var myCustomParser customValue
+// 	var mySliceServerParser sliceServerValue
+// 	var myTimeParser timeValue
+// 	parsers[reflect.TypeOf("")] = &myStringParser
+// 	parsers[reflect.TypeOf(true)] = &myBoolParser
+// 	parsers[reflect.TypeOf(1)] = &myIntParser
+// 	parsers[reflect.TypeOf([]int{})] = &myCustomParser
+// 	parsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
+// 	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
+
+// 	//Test all
+// 	var ex1 example
+// 	tagsmap := make(map[string]reflect.StructField)
+
+// 	if err := getTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
+// 		t.Errorf("Error %s", err.Error())
+// 	}
+
+// 	args := []string{
+// 		// "-title", "myTitle",
+// 		"-h",
+// 		// "-gcli",
+// 		"-cli.hosts", "{myIp1,myDc1}",
+// 		"-t", "myTitle",
+// 		// "-database",""
+// 		"-cli.data", "{1,2,3,4}",
+// 		// "-cli.hosts",""
+// 		"-cli.hosts", "{myIp2,myDc2}",
+// 		"-own.name", "myOwnName",
+// 		"-own.bio", "myOwnBio",
+// 		"-own.dob", "1979-05-27T07:32:00Z",
+// 		"-database.srv", "mySrv",
+// 		"-database.comax", "1000",
+// 		// "-servers":
+// 		"-own.org", "myOwnOrg",
+// 		"-database.ena", //=true"
+// 		"-servers.ip", "myServersIp",
+// 		"-servers.dc", "myServersDc",
+// 	}
+// 	result, err := parseArgs(args, tagsmap, parsers)
+
+// 	fmt.Printf("rslt:%s\n", result)
+// 	if err != nil {
+// 		// fmt.Printf("error:%+v\n", err)
+// 		PrintError(err)
+// 		t.Errorf("Error %s", err.Error())
+// 	}
+
+// }
