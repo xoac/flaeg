@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"sort"
 	"strings"
 	"text/template"
 	"time"
@@ -298,15 +299,24 @@ Flags:`
 		return err
 	}
 
-	// Set defaultValue on parsers
-	for flag, field := range flagmap {
-		if parser, ok := parsers[field.Type]; ok {
-			tempStruct.Flag = flag
-			if reflect.TypeOf(parser.Get()) == defaultValmap[flag].Type() {
-				parser.SetValue(defaultValmap[flag].Interface())
+	// Sort alphabetically
+	flags := make([]string, len(flagmap))
+	i := 0
+	for k := range flagmap {
+		flags[i] = k
+		i++
+	}
+	sort.Strings(flags)
+	for i := range flags {
+		if parser, ok := parsers[flagmap[flags[i]].Type]; ok {
+			tempStruct.Flag = flags[i]
+			//flag on pointer ?
+			if reflect.TypeOf(parser.Get()) == defaultValmap[flags[i]].Type() {
+				// Set defaultValue on parsers
+				parser.SetValue(defaultValmap[flags[i]].Interface())
 			}
 			tempStruct.DefaultValue = parser.String()
-			tempStruct.Description = field.Tag.Get("description")
+			tempStruct.Description = flagmap[flags[i]].Tag.Get("description")
 			tmplHelper, err = template.New("helper").Parse(helper)
 			if err != nil {
 				return err
@@ -317,14 +327,7 @@ Flags:`
 			}
 		}
 	}
-	tmplHelper, err = template.New("helperFoot").Parse(helperFoot)
-	if err != nil {
-		return err
-	}
-	err = tmplHelper.Execute(os.Stdout, tempStruct)
-	if err != nil {
-		return err
-	}
+	fmt.Fprint(os.Stdout, helperFoot)
 
 	return nil
 }
@@ -378,3 +381,18 @@ func getDefaultValue(defaultValue reflect.Value, defaultValmap map[string]reflec
 	}
 	return nil
 }
+
+// func sortMapByKey(m *map[string]interface{}) map[string]interface{} {
+//     sortedM:=*m
+// 	mk := make([]string, len(*m))
+// 	i := 0
+// 	for k := range *m {
+// 		mk[i] = k
+// 		i++
+// 	}
+// 	sort.Strings(mk)
+//     for k := range mk{
+//         sortedM[]
+//     }
+
+// }
