@@ -5,8 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path"
 	"reflect"
 	"strings"
+	"text/template"
 	"time"
 )
 
@@ -62,13 +65,6 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.Struct
 		if err := getTypesRecursive(inst, flagmap, name); err != nil {
 			return err
 		}
-
-	case reflect.Array, reflect.Map, reflect.Slice:
-		typ := objValue.Type().Elem()
-		inst := reflect.New(typ).Elem()
-		if err := getTypesRecursive(inst, flagmap, name); err != nil {
-			return err
-		}
 	default:
 		return nil
 	}
@@ -77,24 +73,28 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.Struct
 
 //ParseArgs : parses args return valmap map[flag]Getter, using parsers map[type]Getter
 //args must be formated as like as flag documentation. See https://golang.org/pkg/flag
-func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers map[reflect.Type]flag.Getter) (map[string]flag.Getter, error) {
-	valmap := make(map[string]flag.Getter)
+func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers map[reflect.Type]Parser) (map[string]Parser, error) {
+	valmap := make(map[string]Parser)
 	flagList := []*flag.Flag{}
 	visitor := func(fl *flag.Flag) {
 		// fmt.Printf("inside : %s\n", fl.Name)
 		flagList = append(flagList, fl)
 	}
-	newParsers := map[string]flag.Getter{}
+	newParsers := map[string]Parser{}
 	flagSet := flag.NewFlagSet("flaeg.Load", flag.ContinueOnError)
 	flagSet.SetOutput(ioutil.Discard)
-	for tag, structField := range flagmap {
 
+	for tag, structField := range flagmap {
 		if parser, ok := parsers[structField.Type]; ok {
-			newparser := reflect.New(reflect.TypeOf(parser).Elem()).Interface().(flag.Getter)
+			newparser := reflect.New(reflect.TypeOf(parser).Elem()).Interface().(Parser)
 			// fmt.Printf("help to print : %s\n", structField.Tag.Get("description"))
 			flagSet.Var(newparser, tag, structField.Tag.Get("description"))
 			newParsers[tag] = newparser
 		}
+		// } else {
+		// 	fmt.Printf("Try to delete flag %s type of %s\n", tag, structField.Type.String())
+		// 	delete(flagmap, tag)
+		// }
 	}
 
 	if err := flagSet.Parse(args); err != nil {
@@ -114,7 +114,7 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 }
 
 //FillStructRecursive initialize a value of any taged Struct given by reference
-func fillStructRecursive(objValue reflect.Value, defaultValmap map[string]reflect.Value, valmap map[string]flag.Getter, key string) error {
+func fillStructRecursive(objValue reflect.Value, defaultValmap map[string]reflect.Value, valmap map[string]Parser, key string) error {
 	name := key
 	switch objValue.Kind() {
 
@@ -199,7 +199,7 @@ func fillStructRecursive(objValue reflect.Value, defaultValmap map[string]reflec
 }
 
 // SetFields sets value to fieldValue using tag as key in valmap
-func setFields(fieldValue reflect.Value, val flag.Getter) error {
+func setFields(fieldValue reflect.Value, val Parser) error {
 	// if reflect.DeepEqual(fieldValue.Interface(), reflect.New(fieldValue.Type()).Elem().Interface()) {
 	if fieldValue.CanSet() {
 		fieldValue.Set(reflect.ValueOf(val).Elem().Convert(fieldValue.Type()))
@@ -212,8 +212,8 @@ func setFields(fieldValue reflect.Value, val flag.Getter) error {
 }
 
 //loadParsers loads default parsers and custom parsers given as parameter. Return a map [reflect.Type]parsers
-func loadParsers(customParsers map[reflect.Type]flag.Getter) (map[reflect.Type]flag.Getter, error) {
-	parsers := map[reflect.Type]flag.Getter{}
+func loadParsers(customParsers map[reflect.Type]Parser) (map[reflect.Type]Parser, error) {
+	parsers := map[reflect.Type]Parser{}
 	var stringParser stringValue
 	var boolParser boolValue
 	var intParser intValue
@@ -230,7 +230,7 @@ func loadParsers(customParsers map[reflect.Type]flag.Getter) (map[reflect.Type]f
 
 //Load initializes config : struct fields given by reference, with args : arguments.
 //Some custom parsers may be given.
-func Load(config interface{}, defaultValue interface{}, args []string, customParsers map[reflect.Type]flag.Getter) error {
+func Load(config interface{}, defaultValue interface{}, args []string, customParsers map[reflect.Type]Parser) error {
 	parsers, err := loadParsers(customParsers)
 	if err != nil {
 		return err
@@ -255,16 +255,78 @@ func Load(config interface{}, defaultValue interface{}, args []string, customPar
 }
 
 //PrintError takes a not nil error and prints command line help
-func PrintError(err error) {
+func PrintError(err error, flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser) {
 	if err != flag.ErrHelp {
 		fmt.Printf("Error : %s\n", err)
 	}
-	PrintHelp()
+	PrintHelp(flagmap, defaultValmap, parsers)
 }
 
 //PrintHelp generates and prints command line help
-func PrintHelp() {
-	//
+func PrintHelp(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser) error {
+	// Get ProgramName
+	_, progName := path.Split(os.Args[0])
+	// Define a templates
+	const helperHead = `
+Usage: {{.ProgName}}                                 run {{.ProgName}} with default values
+   or: {{.ProgName}} -flag args | flag=args ...      use args as value on flags
+   or: {{.ProgName}} -flag | flag=true ...           set true if flags are boolean      
+
+Flags:`
+	const helper = `
+    -{{.Flag}}  default value : {{$.DefaultValue}}
+                    {{ $.Description }}`
+	const helperFoot = `
+    -h
+                    Print Help (this message) and exit
+    --help
+                    Print Help (this message) and exit
+`
+	tempStruct := struct {
+		ProgName     string
+		Flag         string
+		Description  string
+		DefaultValue string
+	}{}
+	tempStruct.ProgName = progName
+	tmplHelper, err := template.New("helperHead").Parse(helperHead)
+	if err != nil {
+		return err
+	}
+	err = tmplHelper.Execute(os.Stdout, tempStruct)
+	if err != nil {
+		return err
+	}
+
+	// Set defaultValue on parsers
+	for flag, field := range flagmap {
+		if parser, ok := parsers[field.Type]; ok {
+			tempStruct.Flag = flag
+			if reflect.TypeOf(parser.Get()) == defaultValmap[flag].Type() {
+				parser.SetValue(defaultValmap[flag].Interface())
+			}
+			tempStruct.DefaultValue = parser.String()
+			tempStruct.Description = field.Tag.Get("description")
+			tmplHelper, err = template.New("helper").Parse(helper)
+			if err != nil {
+				return err
+			}
+			err = tmplHelper.Execute(os.Stdout, tempStruct)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	tmplHelper, err = template.New("helperFoot").Parse(helperFoot)
+	if err != nil {
+		return err
+	}
+	err = tmplHelper.Execute(os.Stdout, tempStruct)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getDefaultValue(defaultValue reflect.Value, defaultValmap map[string]reflect.Value, key string) error {

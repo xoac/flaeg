@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -78,7 +77,7 @@ func TestGetTypesRecursive(t *testing.T) {
 
 func TestParseArgs(t *testing.T) {
 	//creating parsers
-	parsers := map[reflect.Type]flag.Getter{}
+	parsers := map[reflect.Type]Parser{}
 	var myStringParser stringValue
 	var myBoolParser boolValue
 	var myIntParser intValue
@@ -143,7 +142,7 @@ func TestParseArgs(t *testing.T) {
 	serversIPCheck := stringValue("myServersIp")
 	serversDcCheck := stringValue("myServersDc")
 
-	checkParse := map[string]flag.Getter{
+	checkParse := map[string]Parser{
 
 		// "title", "myTitle",
 		// "own",
@@ -175,7 +174,7 @@ func TestParseArgs(t *testing.T) {
 
 func TestFillStructRecursive(t *testing.T) {
 	//creating parsers
-	parsers := map[reflect.Type]flag.Getter{}
+	parsers := map[reflect.Type]Parser{}
 	var myStringParser stringValue
 	var myBoolParser boolValue
 	var myIntParser intValue
@@ -293,6 +292,10 @@ func (c *customValue) Get() interface{} { return []int(*c) }
 
 func (c *customValue) String() string { return fmt.Sprintf("%v", *c) }
 
+func (c *customValue) SetValue(val interface{}) {
+	*c = customValue(val.([]int))
+}
+
 // -- sliceIntValue
 type sliceIntValue []int
 
@@ -308,6 +311,10 @@ func (c *sliceIntValue) Set(s string) error {
 func (c *sliceIntValue) Get() interface{} { return []int(*c) }
 
 func (c *sliceIntValue) String() string { return fmt.Sprintf("%v", *c) }
+
+func (c *sliceIntValue) SetValue(val interface{}) {
+	*c = sliceIntValue(val.([]int))
+}
 
 // -- sliceServerValue format {IP,DC}
 type sliceServerValue []serverInfo
@@ -326,9 +333,13 @@ func (c *sliceServerValue) Get() interface{} { return []serverInfo(*c) }
 
 func (c *sliceServerValue) String() string { return fmt.Sprintf("%v", *c) }
 
+func (c *sliceServerValue) SetValue(val interface{}) {
+	*c = sliceServerValue(val.([]serverInfo))
+}
+
 func TestLoadParsers(t *testing.T) {
 	//creating parsers
-	customParsers := map[reflect.Type]flag.Getter{}
+	customParsers := map[reflect.Type]Parser{}
 	var mySliceIntParser sliceIntValue
 	var mySliceServerParser sliceServerValue
 	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
@@ -340,7 +351,7 @@ func TestLoadParsers(t *testing.T) {
 	}
 
 	//check
-	check := map[reflect.Type]flag.Getter{}
+	check := map[reflect.Type]Parser{}
 	check[reflect.TypeOf([]int{})] = &mySliceIntParser
 	check[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
 	var stringParser stringValue
@@ -360,7 +371,7 @@ func TestLoadParsers(t *testing.T) {
 
 func TestLoad(t *testing.T) {
 	//creating parsers
-	customParsers := map[reflect.Type]flag.Getter{}
+	customParsers := map[reflect.Type]Parser{}
 	var mySliceIntParser sliceIntValue
 	var mySliceServerParser sliceServerValue
 	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
@@ -474,58 +485,46 @@ func TestGetDefaultValue(t *testing.T) {
 
 }
 
-// func TestFlagPrintDefaults(t *testing.T) {
-// 	//creating parsers
-// 	parsers := map[reflect.Type]flag.Getter{}
-// 	var myStringParser stringValue
-// 	var myBoolParser boolValue
-// 	var myIntParser intValue
-// 	var myCustomParser customValue
-// 	var mySliceServerParser sliceServerValue
-// 	var myTimeParser timeValue
-// 	parsers[reflect.TypeOf("")] = &myStringParser
-// 	parsers[reflect.TypeOf(true)] = &myBoolParser
-// 	parsers[reflect.TypeOf(1)] = &myIntParser
-// 	parsers[reflect.TypeOf([]int{})] = &myCustomParser
-// 	parsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
-// 	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
+func TestFlagPrintDefaults(t *testing.T) {
 
-// 	//Test all
-// 	var ex1 example
-// 	tagsmap := make(map[string]reflect.StructField)
+	//Test all
+	var ex1 example
+	flagmap := map[string]reflect.StructField{}
 
-// 	if err := getTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
-// 		t.Errorf("Error %s", err.Error())
-// 	}
+	if err := getTypesRecursive(reflect.ValueOf(ex1), flagmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	var defaultEx example
+	defaultEx.Title = "defaultTitle"
+	defaultEx.Owner.Name = "defaultName"
+	defaultEx.Owner.Organization = "defaultOrg"
+	defaultEx.Owner.Bio = "defaultBio"
+	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
+	defaultEx.Database.Server = "defaultSrv"
+	defaultEx.Database.ConnectionMax = 1111
+	defaultEx.Database.Enable = true
+	defaultEx.Servers.IP = "defaultServersIp"
+	defaultEx.Servers.Dc = "defaultServersDc"
+	defaultEx.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}
 
-// 	args := []string{
-// 		// "-title", "myTitle",
-// 		"-h",
-// 		// "-gcli",
-// 		"-cli.hosts", "{myIp1,myDc1}",
-// 		"-t", "myTitle",
-// 		// "-database",""
-// 		"-cli.data", "{1,2,3,4}",
-// 		// "-cli.hosts",""
-// 		"-cli.hosts", "{myIp2,myDc2}",
-// 		"-own.name", "myOwnName",
-// 		"-own.bio", "myOwnBio",
-// 		"-own.dob", "1979-05-27T07:32:00Z",
-// 		"-database.srv", "mySrv",
-// 		"-database.comax", "1000",
-// 		// "-servers":
-// 		"-own.org", "myOwnOrg",
-// 		"-database.ena", //=true"
-// 		"-servers.ip", "myServersIp",
-// 		"-servers.dc", "myServersDc",
-// 	}
-// 	result, err := parseArgs(args, tagsmap, parsers)
+	defaultValmap := make(map[string]reflect.Value)
+	if err := getDefaultValue(reflect.ValueOf(&defaultEx), defaultValmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 
-// 	fmt.Printf("rslt:%s\n", result)
-// 	if err != nil {
-// 		// fmt.Printf("error:%+v\n", err)
-// 		PrintError(err)
-// 		t.Errorf("Error %s", err.Error())
-// 	}
+	//creating parsers
+	customParsers := map[reflect.Type]Parser{}
+	var mySliceIntParser sliceIntValue
+	var mySliceServerParser sliceServerValue
+	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
+	customParsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
+	parsers, err := loadParsers(customParsers)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 
-// }
+	if err := PrintHelp(flagmap, defaultValmap, parsers); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+}
