@@ -273,10 +273,9 @@ Usage: {{.ProgName}}                                 run {{.ProgName}} with defa
    or: {{.ProgName}} -flag args | flag=args ...      use args as value on flags
    or: {{.ProgName}} -flag | flag=true ...           set true if flags are boolean      
 
-Flags:`
-	const helper = `
-    -{{.Flag}}  default value : {{$.DefaultValue}}
-                    {{ $.Description }}`
+Flags:
+`
+	const helper = `{{printf "\t-%-50s %s (default \"%s\")\n" .Flag $.Description $.DefaultValue}}`
 	const helperFoot = `
     -h
                     Print Help (this message) and exit
