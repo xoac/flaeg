@@ -265,31 +265,57 @@ func PrintError(err error, flagmap map[string]reflect.StructField, defaultValmap
 
 //PrintHelp generates and prints command line help
 func PrintHelp(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser) error {
+	// Define a templates
+	const helper = `
+Usage: {{.ProgName}}                                  run {{.ProgName}} with default values
+   or: {{.ProgName}} -flag args | -flag=args ...      use args as value on flags
+   or: {{.ProgName}} -flag | -flag=true ...           set true if flags are boolean      
+
+Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$defaultValues := index $.DefaultValues $j}}
+{{printf "\t-%-50s %s (default \"%s\")" $flag $description $defaultValues}}{{end}}`
+
+	// Preprocess data
+	// Sort alphabetically & delete unparsable flags in a slice
+	flags := []string{}
+	i := 0
+	for flag, field := range flagmap {
+		if _, ok := parsers[field.Type]; ok {
+			flags = append(flags, flag)
+			i++
+		}
+	}
+	sort.Strings(flags)
+
+	// Process data
+	descriptions := make([]string, len(flags))
+	defaultValues := make([]string, len(flags))
+	for j, flag := range flags {
+		//flag on pointer ?
+		if defaultValmap[flag].Kind() != reflect.Ptr {
+			// Set defaultValue on parsers
+			parsers[flagmap[flag].Type].SetValue(defaultValmap[flag].Interface())
+		}
+		defaultValues[j] = parsers[flagmap[flag].Type].String()
+		descriptions[j] = flagmap[flag].Tag.Get("description")
+	}
 	// Get ProgramName
 	_, progName := path.Split(os.Args[0])
-	// Define a templates
-	const helperHead = `
-Usage: {{.ProgName}}                                 run {{.ProgName}} with default values
-   or: {{.ProgName}} -flag args | flag=args ...      use args as value on flags
-   or: {{.ProgName}} -flag | flag=true ...           set true if flags are boolean      
 
-Flags:
-`
-	const helper = `{{printf "\t-%-50s %s (default \"%s\")\n" .Flag $.Description $.DefaultValue}}`
-	const helperFoot = `
-    -h
-                    Print Help (this message) and exit
-    --help
-                    Print Help (this message) and exit
-`
+	// Use a struct to give data to template
 	tempStruct := struct {
-		ProgName     string
-		Flag         string
-		Description  string
-		DefaultValue string
-	}{}
-	tempStruct.ProgName = progName
-	tmplHelper, err := template.New("helperHead").Parse(helperHead)
+		ProgName      string
+		Flags         []string
+		Descriptions  []string
+		DefaultValues []string
+	}{
+		progName,
+		flags,
+		descriptions,
+		defaultValues,
+	}
+
+	//Run Template
+	tmplHelper, err := template.New("helper").Parse(helper)
 	if err != nil {
 		return err
 	}
@@ -297,37 +323,8 @@ Flags:
 	if err != nil {
 		return err
 	}
-
-	// Sort alphabetically
-	flags := make([]string, len(flagmap))
-	i := 0
-	for k := range flagmap {
-		flags[i] = k
-		i++
-	}
-	sort.Strings(flags)
-	for i := range flags {
-		if parser, ok := parsers[flagmap[flags[i]].Type]; ok {
-			tempStruct.Flag = flags[i]
-			//flag on pointer ?
-			if reflect.TypeOf(parser.Get()) == defaultValmap[flags[i]].Type() {
-				// Set defaultValue on parsers
-				parser.SetValue(defaultValmap[flags[i]].Interface())
-			}
-			tempStruct.DefaultValue = parser.String()
-			tempStruct.Description = flagmap[flags[i]].Tag.Get("description")
-			tmplHelper, err = template.New("helper").Parse(helper)
-			if err != nil {
-				return err
-			}
-			err = tmplHelper.Execute(os.Stdout, tempStruct)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	fmt.Fprint(os.Stdout, helperFoot)
-
+	//And footer
+	fmt.Fprintf(os.Stdout, "\n\t-%-50s %s\n", "h, --help", "Print Help (this message) and exit")
 	return nil
 }
 

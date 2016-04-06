@@ -485,7 +485,7 @@ func TestGetDefaultValue(t *testing.T) {
 
 }
 
-func TestPrintError(t *testing.T) {
+func TestPrintHelp(t *testing.T) {
 
 	//Test all
 	var ex1 example
