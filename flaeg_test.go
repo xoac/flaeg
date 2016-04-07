@@ -35,7 +35,7 @@ type example struct {
 	Owner    ownerInfo    `long:"own"  description:"overwrite server ip address"`
 	Database databaseInfo ` description:"overwrite server ip address"`
 	Servers  serverInfo   `description:"overwrite servers info --servers.[ip|dc] [srv name]: value"`
-	Clients  *clientInfo  `long:"cli"  description:"overwrite server ip address"`
+	Clients  *clientInfo  `long:"cli" short:"c"  description:"overwrite server ip address"`
 }
 
 func TestGetTypesRecursive(t *testing.T) {
@@ -50,6 +50,7 @@ func TestGetTypesRecursive(t *testing.T) {
 		"title":          reflect.TypeOf(""),
 		"own":            reflect.TypeOf(ownerInfo{}),
 		"cli":            reflect.TypeOf(true),
+		"c":              reflect.TypeOf(true),
 		"cli.hosts.ip":   reflect.TypeOf(""),
 		"t":              reflect.TypeOf(""),
 		"database":       reflect.TypeOf(databaseInfo{}),
@@ -458,10 +459,11 @@ func TestGetDefaultValue(t *testing.T) {
 	checkTime, _ := time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
 	checkValue := map[string]reflect.Value{
 		"title":          reflect.ValueOf("defaultTitle"),
+		"t":              reflect.ValueOf("defaultTitle"),
 		"own":            reflect.ValueOf(ownerInfo{"defaultName", "defaultOrg", "defaultBio", checkTime}),
 		"cli":            reflect.ValueOf(&clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}),
+		"c":              reflect.ValueOf(&clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}),
 		"cli.hosts.ip":   reflect.ValueOf(""),
-		"t":              reflect.ValueOf("defaultTitle"),
 		"database":       reflect.ValueOf(databaseInfo{"defaultSrv", 1111, false}),
 		"cli.data":       reflect.ValueOf([]int{4, 3, 2}),
 		"cli.hosts":      reflect.ValueOf([]serverInfo{{"defaultIp1", "defaultDc1"}}),

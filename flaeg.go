@@ -50,16 +50,12 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.Struct
 		}
 	case reflect.Ptr:
 		if len(key) > 0 {
-			//TODO : short tag
-			flagmap[strings.ToLower(name)] = reflect.StructField{
-				flagmap[strings.ToLower(name)].Name,
-				flagmap[strings.ToLower(name)].PkgPath,
-				reflect.TypeOf(false),
-				flagmap[strings.ToLower(name)].Tag,
-				flagmap[strings.ToLower(name)].Offset,
-				flagmap[strings.ToLower(name)].Index,
-				flagmap[strings.ToLower(name)].Anonymous,
+			field := flagmap[strings.ToLower(name)]
+			field.Type = reflect.TypeOf(false)
+			if tag := field.Tag.Get("short"); len(tag) > 0 {
+				flagmap[strings.ToLower(tag)] = field
 			}
+			flagmap[strings.ToLower(name)] = field
 		}
 		typ := objValue.Type().Elem()
 		inst := reflect.New(typ).Elem()
@@ -78,7 +74,6 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 	valmap := make(map[string]Parser)
 	flagList := []*flag.Flag{}
 	visitor := func(fl *flag.Flag) {
-		// fmt.Printf("inside : %s\n", fl.Name)
 		flagList = append(flagList, fl)
 	}
 	newParsers := map[string]Parser{}
@@ -88,14 +83,9 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 	for tag, structField := range flagmap {
 		if parser, ok := parsers[structField.Type]; ok {
 			newparser := reflect.New(reflect.TypeOf(parser).Elem()).Interface().(Parser)
-			// fmt.Printf("help to print : %s\n", structField.Tag.Get("description"))
 			flagSet.Var(newparser, tag, structField.Tag.Get("description"))
 			newParsers[tag] = newparser
 		}
-		// } else {
-		// 	fmt.Printf("Try to delete flag %s type of %s\n", tag, structField.Type.String())
-		// 	delete(flagmap, tag)
-		// }
 	}
 
 	if err := flagSet.Parse(args); err != nil {
@@ -201,14 +191,11 @@ func fillStructRecursive(objValue reflect.Value, defaultValmap map[string]reflec
 
 // SetFields sets value to fieldValue using tag as key in valmap
 func setFields(fieldValue reflect.Value, val Parser) error {
-	// if reflect.DeepEqual(fieldValue.Interface(), reflect.New(fieldValue.Type()).Elem().Interface()) {
 	if fieldValue.CanSet() {
 		fieldValue.Set(reflect.ValueOf(val).Elem().Convert(fieldValue.Type()))
 	} else {
 		return errors.New(fieldValue.Type().String() + " is not settable.")
 	}
-
-	// }
 	return nil
 }
 
@@ -261,6 +248,50 @@ func PrintError(err error, flagmap map[string]reflect.StructField, defaultValmap
 		fmt.Printf("Error : %s\n", err)
 	}
 	PrintHelp(flagmap, defaultValmap, parsers)
+}
+
+func getDefaultValue(defaultValue reflect.Value, defaultValmap map[string]reflect.Value, key string) error {
+
+	name := key
+	switch defaultValue.Kind() {
+	case reflect.Struct:
+		name += defaultValue.Type().Name()
+		for i := 0; i < defaultValue.NumField(); i++ {
+			if len(defaultValue.Type().Field(i).Tag.Get("description")) > 0 {
+				fieldName := defaultValue.Type().Field(i).Name
+				if tag := defaultValue.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
+					fieldName = tag
+				}
+				if tag := defaultValue.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
+					if _, ok := defaultValmap[strings.ToLower(tag)]; ok {
+						return errors.New("Tag already exists: " + tag)
+					}
+					defaultValmap[strings.ToLower(tag)] = defaultValue.Field(i)
+				}
+				if len(key) == 0 {
+					name = fieldName
+				} else {
+					name = key + "." + fieldName
+				}
+				if _, ok := defaultValmap[strings.ToLower(name)]; ok {
+					return errors.New("Tag already exists: " + name)
+				}
+				defaultValmap[strings.ToLower(name)] = defaultValue.Field(i)
+				if err := getDefaultValue(defaultValue.Field(i), defaultValmap, name); err != nil {
+					return err
+				}
+			}
+		}
+	case reflect.Ptr:
+		if !defaultValue.IsNil() {
+			if err := getDefaultValue(defaultValue.Elem(), defaultValmap, name); err != nil {
+				return err
+			}
+		}
+	default:
+		return nil
+	}
+	return nil
 }
 
 //PrintHelp generates and prints command line help
@@ -327,68 +358,3 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 	fmt.Fprintf(os.Stdout, "\n\t-%-50s %s\n", "h, --help", "Print Help (this message) and exit")
 	return nil
 }
-
-func getDefaultValue(defaultValue reflect.Value, defaultValmap map[string]reflect.Value, key string) error {
-
-	name := key
-	switch defaultValue.Kind() {
-	case reflect.Struct:
-		name += defaultValue.Type().Name()
-		for i := 0; i < defaultValue.NumField(); i++ {
-			if len(defaultValue.Type().Field(i).Tag.Get("description")) > 0 {
-				fieldName := defaultValue.Type().Field(i).Name
-				if tag := defaultValue.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
-					fieldName = tag
-				}
-				if tag := defaultValue.Type().Field(i).Tag.Get("short"); len(tag) > 0 {
-					if _, ok := defaultValmap[strings.ToLower(tag)]; ok {
-						return errors.New("Tag already exists: " + tag)
-					}
-					defaultValmap[strings.ToLower(tag)] = defaultValue.Field(i)
-					// fmt.Printf("Gives val %+v to flag %s\n", defaultValue.Field(i), strings.ToLower(tag))
-				}
-				if len(key) == 0 {
-					name = fieldName
-				} else {
-					name = key + "." + fieldName
-				}
-				if _, ok := defaultValmap[strings.ToLower(name)]; ok {
-					return errors.New("Tag already exists: " + name)
-				}
-				defaultValmap[strings.ToLower(name)] = defaultValue.Field(i)
-				if err := getDefaultValue(defaultValue.Field(i), defaultValmap, name); err != nil {
-					return err
-				}
-			}
-		}
-	case reflect.Ptr:
-		if !defaultValue.IsNil() {
-			// if len(key) > 0 {
-			// 	//TODO : short tag
-			// 	//defaultValmap[strings.ToLower(name)] = reflect.New(defaultValue.Type())
-			// 	delete(defaultValmap, strings.ToLower(name))
-			// }
-			if err := getDefaultValue(defaultValue.Elem(), defaultValmap, name); err != nil {
-				return err
-			}
-		}
-	default:
-		return nil
-	}
-	return nil
-}
-
-// func sortMapByKey(m *map[string]interface{}) map[string]interface{} {
-//     sortedM:=*m
-// 	mk := make([]string, len(*m))
-// 	i := 0
-// 	for k := range *m {
-// 		mk[i] = k
-// 		i++
-// 	}
-// 	sort.Strings(mk)
-//     for k := range mk{
-//         sortedM[]
-//     }
-
-// }
