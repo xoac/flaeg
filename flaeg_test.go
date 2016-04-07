@@ -105,7 +105,7 @@ func TestParseArgs(t *testing.T) {
 		// "own",
 		// "cli":
 		"-cli.hosts", "{myIp1,myDc1}",
-		"-t", "myTitle",
+		"--t", "myTitle",
 		// "-database",""
 		"-cli.data", "{1,2,3,4}",
 		// "-cli.hosts",""

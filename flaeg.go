@@ -303,32 +303,48 @@ Usage: {{.ProgName}}                                  run {{.ProgName}} with def
    or: {{.ProgName}} -flag | -flag=true ...           set true if flags are boolean      
 
 Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$defaultValues := index $.DefaultValues $j}}
-{{printf "\t-%-50s %s (default \"%s\")" $flag $description $defaultValues}}{{end}}`
+{{printf "\t%-50s %s (default \"%s\")" $flag $description $defaultValues}}{{end}}`
 
 	// Preprocess data
-	// Sort alphabetically & delete unparsable flags in a slice
+
+	// Reverse flagmap map[string]reflect.StructField in map[reflect.StructField][]string
+	// & Sort alphabetically & Delete unparsable flags in a slice
+	fieldmap := map[string][]string{}
 	flags := []string{}
 	i := 0
 	for flag, field := range flagmap {
 		if _, ok := parsers[field.Type]; ok {
-			flags = append(flags, flag)
-			i++
+			if len(fieldmap[field.PkgPath+field.Name]) == 0 {
+				flags = append(flags, flag)
+				i++
+			}
+			fieldmap[field.PkgPath+field.Name] = append(fieldmap[field.PkgPath+field.Name], flag)
+
 		}
 	}
 	sort.Strings(flags)
 
 	// Process data
-	descriptions := make([]string, len(flags))
-	defaultValues := make([]string, len(flags))
-	for j, flag := range flags {
+	printDescriptions := []string{}
+	printDefaultValues := []string{}
+	printFlags := []string{}
+	for _, flag := range flags {
+		field := flagmap[flag]
+		if len(fieldmap[field.PkgPath+field.Name]) == 2 {
+			printFlags = append(printFlags, "-"+fieldmap[field.PkgPath+field.Name][0]+", -"+fieldmap[field.PkgPath+field.Name][1])
+		} else {
+			printFlags = append(printFlags, "-"+fieldmap[field.PkgPath+field.Name][0])
+		}
+		printDescriptions = append(printDescriptions, field.Tag.Get("description"))
 		//flag on pointer ?
 		if defaultValmap[flag].Kind() != reflect.Ptr {
 			// Set defaultValue on parsers
-			parsers[flagmap[flag].Type].SetValue(defaultValmap[flag].Interface())
+			parsers[field.Type].SetValue(defaultValmap[flag].Interface())
 		}
-		defaultValues[j] = parsers[flagmap[flag].Type].String()
-		descriptions[j] = flagmap[flag].Tag.Get("description")
+		printDefaultValues = append(printDefaultValues, parsers[field.Type].String())
+
 	}
+
 	// Get ProgramName
 	_, progName := path.Split(os.Args[0])
 
@@ -340,9 +356,9 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 		DefaultValues []string
 	}{
 		progName,
-		flags,
-		descriptions,
-		defaultValues,
+		printFlags,
+		printDescriptions,
+		printDefaultValues,
 	}
 
 	//Run Template
@@ -355,6 +371,6 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 		return err
 	}
 	//And footer
-	fmt.Fprintf(os.Stdout, "\n\t-%-50s %s\n", "h, --help", "Print Help (this message) and exit")
+	fmt.Fprintf(os.Stdout, "\n\t%-50s %s\n", "-h, -help", "Print Help (this message) and exit")
 	return nil
 }
