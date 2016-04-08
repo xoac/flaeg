@@ -332,10 +332,11 @@ func getDefaultValue(defaultValue reflect.Value, defaultValmap map[string]reflec
 //PrintHelp generates and prints command line help
 func PrintHelp(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser) error {
 	// Define a templates
+	// Using POSXE STD : http://pubs.opengroup.org/onlinepubs/9699919799/
+	//TO DO : program description, bugs report, home page, full doc
 	const helper = `
-Usage: {{.ProgName}}                                  run {{.ProgName}} with default values
-   or: {{.ProgName}} -flag args | -flag=args ...      use args as value on flags
-   or: {{.ProgName}} -flag | -flag=true ...           set true if flags are boolean      
+Usage: {{.ProgName}} [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to any flags
+   or: {{.ProgName}} [--flag[=true|false| ]] [-f[true|false| ]] ...     set true/false to boolean flags    
 
 Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$defaultValues := index $.DefaultValues $j}}
 {{printf "\t%-50s %s (default \"%s\")" $flag $description $defaultValues}}{{end}}`
@@ -366,9 +367,9 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 	for _, flag := range flags {
 		field := flagmap[flag]
 		if len(fieldmap[field.PkgPath+field.Name]) == 2 {
-			printFlags = append(printFlags, "-"+fieldmap[field.PkgPath+field.Name][0]+", -"+fieldmap[field.PkgPath+field.Name][1])
+			printFlags = append(printFlags, "-"+fieldmap[field.PkgPath+field.Name][0]+", --"+fieldmap[field.PkgPath+field.Name][1])
 		} else {
-			printFlags = append(printFlags, "-"+fieldmap[field.PkgPath+field.Name][0])
+			printFlags = append(printFlags, "--"+fieldmap[field.PkgPath+field.Name][0])
 		}
 		printDescriptions = append(printDescriptions, field.Tag.Get("description"))
 		//flag on pointer ?

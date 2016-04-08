@@ -379,22 +379,22 @@ func TestLoad(t *testing.T) {
 
 	//args
 	args := []string{
-		"-cli.hosts", "{myIp1,myDc1}",
-		"-t", "myTitle",
-		"-cli.hosts", "{myIp2,myDc2}",
-		"-own.name", "myOwnName",
-		"-own.bio", "myOwnBio",
-		"-own.dob", "1979-05-27T07:32:00Z",
-		"-database.srv", "mySrv",
-		"-database.comax", "1000",
-		"-own.org", "myOwnOrg",
-		"-database.ena", //=true"
-		"-servers.ip", "myServersIp",
-		"-servers.dc", "myServersDc",
-		"-cli.data", "1",
-		"-cli.data", "2",
-		"-cli.data", "3",
-		"-cli.data", "4",
+		"--cli.hosts={myIp1,myDc1}",
+		"-tmyTitle",
+		"--cli.hosts={myIp2,myDc2}",
+		"--own.name=myOwnName",
+		"--own.bio=myOwnBio",
+		"--own.dob=1979-05-27T07:32:00Z",
+		"--database.srv=mySrv",
+		"--database.comax=1000",
+		"--own.org=myOwnOrg",
+		"--database.ena", //=true"
+		"--servers.ip=myServersIp",
+		"--servers.dc=myServersDc",
+		"--cli.data=1",
+		"--cli.data=2",
+		"--cli.data=3",
+		"--cli.data=4",
 	}
 
 	//Test all
