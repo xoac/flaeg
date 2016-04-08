@@ -104,22 +104,22 @@ func TestParseArgs(t *testing.T) {
 		// "-title", "myTitle",
 		// "own",
 		// "cli":
-		"-cli.hosts", "{myIp1,myDc1}",
-		"--t", "myTitle",
+		"--cli.hosts={myIp1,myDc1}",
+		"-tmyTitle",
 		// "-database",""
-		"-cli.data", "{1,2,3,4}",
+		"--cli.data={1,2,3,4}",
 		// "-cli.hosts",""
-		"-cli.hosts", "{myIp2,myDc2}",
-		"-own.name", "myOwnName",
-		"-own.bio", "myOwnBio",
-		"-own.dob", "1979-05-27T07:32:00Z",
-		"-database.srv", "mySrv",
-		"-database.comax", "1000",
+		"--cli.hosts={myIp2,myDc2}",
+		"--own.name=myOwnName",
+		"--own.bio=myOwnBio",
+		"--own.dob=1979-05-27T07:32:00Z",
+		"--database.srv=mySrv",
+		"--database.comax=1000",
 		// "-servers":
-		"-own.org", "myOwnOrg",
-		"-database.ena", //=true"
-		"-servers.ip", "myServersIp",
-		"-servers.dc", "myServersDc",
+		"--own.org=myOwnOrg",
+		"--database.ena", //=true"
+		"--servers.ip=myServersIp",
+		"--servers.dc=myServersDc",
 	}
 	pargs, err := parseArgs(args, tagsmap, parsers)
 	if err != nil {
@@ -149,7 +149,7 @@ func TestParseArgs(t *testing.T) {
 		// "own",
 		// "cli":
 		"cli.hosts": &cliHostsCheck,
-		"t":         &tCheck,
+		"title":     &tCheck,
 		// "database",""
 		"cli.data": &cliDataCheck,
 		// "cli.hosts",""
@@ -166,7 +166,6 @@ func TestParseArgs(t *testing.T) {
 	}
 
 	for tag, inter := range pargs {
-
 		if !reflect.DeepEqual(checkParse[tag].Get(), inter.Get()) {
 			t.Fatalf("Error tag %s : expected %+v got %+v", tag, checkParse[tag].Get(), inter.Get())
 		}

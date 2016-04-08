@@ -2,8 +2,8 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
+	flag "github.com/ogier/pflag"
 	"io/ioutil"
 	"os"
 	"path"
@@ -71,23 +71,56 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.Struct
 //ParseArgs : parses args return valmap map[flag]Getter, using parsers map[type]Getter
 //args must be formated as like as flag documentation. See https://golang.org/pkg/flag
 func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers map[reflect.Type]Parser) (map[string]Parser, error) {
+	//Return var
 	valmap := make(map[string]Parser)
+	//Preprocess
+	// Reverse flagmap map[string]reflect.StructField in map[reflect.StructField][]string
+	// & Delete unparsable flags in a slice
+	fieldmap := map[string][]string{}
+	flags := []string{}
+	i := 0
+	for flag, field := range flagmap {
+		if _, ok := parsers[field.Type]; ok {
+			if len(fieldmap[field.PkgPath+field.Name]) == 0 {
+				flags = append(flags, flag)
+				i++
+			}
+			fieldmap[field.PkgPath+field.Name] = append(fieldmap[field.PkgPath+field.Name], flag)
+
+		}
+	}
+
+	//Visitor in flag.Parse
 	flagList := []*flag.Flag{}
 	visitor := func(fl *flag.Flag) {
 		flagList = append(flagList, fl)
 	}
 	newParsers := map[string]Parser{}
 	flagSet := flag.NewFlagSet("flaeg.Load", flag.ContinueOnError)
+	//Disable output
 	flagSet.SetOutput(ioutil.Discard)
 
-	for tag, structField := range flagmap {
+	// for tag, structField := range flagmap {
+	for _, flag := range flags {
+		structField := flagmap[flag]
 		if parser, ok := parsers[structField.Type]; ok {
 			newparser := reflect.New(reflect.TypeOf(parser).Elem()).Interface().(Parser)
-			flagSet.Var(newparser, tag, structField.Tag.Get("description"))
-			newParsers[tag] = newparser
+			if shortLongFlags, ok := fieldmap[structField.PkgPath+structField.Name]; len(shortLongFlags) == 2 && ok {
+				if len(shortLongFlags[0]) > len(shortLongFlags[1]) {
+					flagSet.VarP(newparser, shortLongFlags[0], shortLongFlags[1], structField.Tag.Get("description"))
+				} else {
+					flagSet.VarP(newparser, shortLongFlags[1], shortLongFlags[0], structField.Tag.Get("description"))
+				}
+				newParsers[shortLongFlags[0]] = newparser
+				newParsers[shortLongFlags[1]] = newparser
+			} else {
+				flagSet.Var(newparser, flag, structField.Tag.Get("description"))
+				newParsers[flag] = newparser
+			}
 		}
 	}
 
+	// Call custom helper
 	if err := flagSet.Parse(args); err != nil {
 		fmt.Printf("error:%+v\n", err)
 		if err == flag.ErrHelp {
@@ -96,7 +129,9 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 		return nil, err
 	}
 
+	//Fill flagList with parsed flags
 	flagSet.Visit(visitor)
+	//Return parsers on parsed flag
 	for _, flag := range flagList {
 		valmap[flag.Name] = newParsers[flag.Name]
 	}
