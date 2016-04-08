@@ -78,17 +78,22 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 	// & Delete unparsable flags in a slice
 	fieldmap := map[string][]string{}
 	flags := []string{}
-	i := 0
 	for flag, field := range flagmap {
 		if _, ok := parsers[field.Type]; ok {
 			if len(fieldmap[field.PkgPath+field.Name]) == 0 {
 				flags = append(flags, flag)
-				i++
 			}
-			fieldmap[field.PkgPath+field.Name] = append(fieldmap[field.PkgPath+field.Name], flag)
+			if len(flag) == 1 && len(fieldmap[field.PkgPath+field.Name]) >= 1 {
+				tmp := fieldmap[field.PkgPath+field.Name][0]
+				fieldmap[field.PkgPath+field.Name][0] = flag
+				fieldmap[field.PkgPath+field.Name] = append(fieldmap[field.PkgPath+field.Name], tmp)
+			} else {
+				fieldmap[field.PkgPath+field.Name] = append(fieldmap[field.PkgPath+field.Name], flag)
+			}
 
 		}
 	}
+	// fmt.Println(fieldmap)
 
 	//Visitor in flag.Parse
 	flagList := []*flag.Flag{}
@@ -106,11 +111,11 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 		if parser, ok := parsers[structField.Type]; ok {
 			newparser := reflect.New(reflect.TypeOf(parser).Elem()).Interface().(Parser)
 			if shortLongFlags, ok := fieldmap[structField.PkgPath+structField.Name]; len(shortLongFlags) == 2 && ok {
-				if len(shortLongFlags[0]) > len(shortLongFlags[1]) {
-					flagSet.VarP(newparser, shortLongFlags[0], shortLongFlags[1], structField.Tag.Get("description"))
-				} else {
-					flagSet.VarP(newparser, shortLongFlags[1], shortLongFlags[0], structField.Tag.Get("description"))
-				}
+				// if len(shortLongFlags[0]) > len(shortLongFlags[1]) {
+				// flagSet.VarP(newparser, shortLongFlags[0], shortLongFlags[1], structField.Tag.Get("description"))
+				// } else {
+				flagSet.VarP(newparser, shortLongFlags[1], shortLongFlags[0], structField.Tag.Get("description"))
+				// }
 				newParsers[shortLongFlags[0]] = newparser
 				newParsers[shortLongFlags[1]] = newparser
 			} else {
@@ -347,14 +352,18 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 	// & Sort alphabetically & Delete unparsable flags in a slice
 	fieldmap := map[string][]string{}
 	flags := []string{}
-	i := 0
 	for flag, field := range flagmap {
 		if _, ok := parsers[field.Type]; ok {
 			if len(fieldmap[field.PkgPath+field.Name]) == 0 {
 				flags = append(flags, flag)
-				i++
 			}
-			fieldmap[field.PkgPath+field.Name] = append(fieldmap[field.PkgPath+field.Name], flag)
+			if len(flag) == 1 && len(fieldmap[field.PkgPath+field.Name]) >= 1 {
+				tmp := fieldmap[field.PkgPath+field.Name][0]
+				fieldmap[field.PkgPath+field.Name][0] = flag
+				fieldmap[field.PkgPath+field.Name] = append(fieldmap[field.PkgPath+field.Name], tmp)
+			} else {
+				fieldmap[field.PkgPath+field.Name] = append(fieldmap[field.PkgPath+field.Name], flag)
+			}
 
 		}
 	}
