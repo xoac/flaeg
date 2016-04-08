@@ -199,19 +199,19 @@ func TestFillStructRecursive(t *testing.T) {
 		// "-title", "myTitle",
 		// "own",
 		// "-cli",
-		"-cli.hosts", "{myIp1,myDc1}",
-		"-t", "myTitle",
+		"--cli.hosts={myIp1,myDc1}",
+		"-tmyTitle",
 		// "-database",""
 		// "-cli.hosts",""
-		"-cli.hosts", "{myIp2,myDc2}",
-		"-own.name", "myOwnName",
+		"--cli.hosts={myIp2,myDc2}",
+		"--own.name=myOwnName",
 		// "-own.bio", "myOwnBio",
-		"-own.dob", "1979-05-27T07:32:00Z",
-		"-database.srv", "mySrv",
-		"-database.comax", "1000",
+		"--own.dob=1979-05-27T07:32:00Z",
+		"--database.srv=mySrv",
+		"--database.comax=1000",
 		// "-servers":
-		"-own.org", "myOwnOrg",
-		"-database.ena", //=true"
+		"--own.org=myOwnOrg",
+		"--database.ena", //=true"
 		// "-servers.ip", "myServersIp",
 		// "-servers.dc", "myServersDc",
 		// "-cli.data", "1",
