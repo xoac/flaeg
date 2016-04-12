@@ -18,30 +18,31 @@ type ownerInfo struct {
 	Dob          time.Time `long:"dob" description:"overwrite owner date of birth"`
 }
 type databaseInfo struct {
+	ServerInfo
 	Server        string `long:"srv" description:"overwrite database server ip address"`
 	ConnectionMax int    `long:"comax" description:"overwrite maximum number of connection on the database"`
 	Enable        bool   `long:"ena" description:"overwrite database enable"`
 }
-type serverInfo struct {
+type ServerInfo struct {
 	IP string `long:"ip" description:"overwrite server ip address"`
 	Dc string `long:"dc" description:"overwrite server domain controller"`
 }
 type clientInfo struct {
 	Data  []int        `long:"data" description:"overwrite clients data"`
-	Hosts []serverInfo `description:"overwrite clients host names"`
+	Hosts []ServerInfo `description:"overwrite clients host names"`
 }
 type example struct {
 	Title    string       `short:"t" description:"overwrite title"` //
 	Owner    ownerInfo    `long:"own"  description:"overwrite server ip address"`
 	Database databaseInfo ` description:"overwrite server ip address"`
-	Servers  serverInfo   `description:"overwrite servers info --servers.[ip|dc] [srv name]: value"`
+	Servers  ServerInfo   `description:"overwrite servers info --servers.[ip|dc] [srv name]: value"`
 	Clients  *clientInfo  `long:"cli" short:"c"  description:"overwrite server ip address"`
 }
 
 func TestGetTypesRecursive(t *testing.T) {
 	//Test all
 	var ex1 example
-	namesmap := make(map[string]reflect.StructField)
+	namesmap := make(map[string]StructField)
 	if err := getTypesRecursive(reflect.ValueOf(&ex1), namesmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -50,19 +51,19 @@ func TestGetTypesRecursive(t *testing.T) {
 		"title":          reflect.TypeOf(""),
 		"own":            reflect.TypeOf(ownerInfo{}),
 		"cli":            reflect.TypeOf(true),
-		"c":              reflect.TypeOf(true),
 		"cli.hosts.ip":   reflect.TypeOf(""),
-		"t":              reflect.TypeOf(""),
 		"database":       reflect.TypeOf(databaseInfo{}),
+		"database.ip":    reflect.TypeOf(""),
+		"database.dc":    reflect.TypeOf(""),
 		"cli.data":       reflect.TypeOf([]int{}),
-		"cli.hosts":      reflect.TypeOf([]serverInfo{}),
+		"cli.hosts":      reflect.TypeOf([]ServerInfo{}),
 		"cli.hosts.dc":   reflect.TypeOf(""),
 		"own.name":       reflect.TypeOf(""),
 		"own.bio":        reflect.TypeOf(""),
 		"own.dob":        reflect.TypeOf(time.Time{}),
 		"database.srv":   reflect.TypeOf(""),
 		"database.comax": reflect.TypeOf(0),
-		"servers":        reflect.TypeOf(serverInfo{}),
+		"servers":        reflect.TypeOf(ServerInfo{}),
 		"own.org":        reflect.TypeOf(""),
 		"database.ena":   reflect.TypeOf(true),
 		"servers.ip":     reflect.TypeOf(""),
@@ -89,12 +90,12 @@ func TestParseArgs(t *testing.T) {
 	parsers[reflect.TypeOf(true)] = &myBoolParser
 	parsers[reflect.TypeOf(1)] = &myIntParser
 	parsers[reflect.TypeOf([]int{})] = &myCustomParser
-	parsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
+	parsers[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
 	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
 
 	//Test all
 	var ex1 example
-	tagsmap := make(map[string]reflect.StructField)
+	tagsmap := make(map[string]StructField)
 
 	if err := getTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
@@ -129,7 +130,7 @@ func TestParseArgs(t *testing.T) {
 
 	//CHECK
 
-	cliHostsCheck := sliceServerValue([]serverInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}})
+	cliHostsCheck := sliceServerValue([]ServerInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}})
 	tCheck := stringValue("myTitle")
 	cliDataCheck := customValue([]int{1, 2, 3, 4})
 	ownNameCheck := stringValue("myOwnName")
@@ -172,6 +173,61 @@ func TestParseArgs(t *testing.T) {
 	}
 }
 
+func TestGetDefaultValue(t *testing.T) {
+	//Test all
+	var defaultEx example
+	defaultEx.Title = "defaultTitle"
+	defaultEx.Owner.Name = "defaultName"
+	defaultEx.Owner.Organization = "defaultOrg"
+	defaultEx.Owner.Bio = "defaultBio"
+	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
+	defaultEx.Database.IP = "defaultDatabaseIP"
+	defaultEx.Database.Dc = "defaultDatabaseDc"
+	defaultEx.Database.Server = "defaultSrv"
+	defaultEx.Database.ConnectionMax = 1111
+	defaultEx.Database.Enable = false
+	defaultEx.Servers.IP = "defaultServersIp"
+	defaultEx.Servers.Dc = "defaultServersDc"
+	defaultEx.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []ServerInfo{{"defaultIp1", "defaultDc1"}}}
+
+	defaultValmap := make(map[string]reflect.Value)
+	if err := getDefaultValue(reflect.ValueOf(&defaultEx), defaultValmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	// fmt.Printf("defaultValmap : %s\n", defaultValmap)
+
+	checkTime, _ := time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
+	checkValue := map[string]reflect.Value{
+		"title":          reflect.ValueOf("defaultTitle"),
+		"own":            reflect.ValueOf(ownerInfo{"defaultName", "defaultOrg", "defaultBio", checkTime}),
+		"cli":            reflect.ValueOf(&clientInfo{Data: []int{4, 3, 2}, Hosts: []ServerInfo{{"defaultIp1", "defaultDc1"}}}),
+		"cli.hosts.ip":   reflect.ValueOf(""),
+		"database":       reflect.ValueOf(databaseInfo{ServerInfo{"defaultDatabaseIP", "defaultDatabaseDc"}, "defaultSrv", 1111, false}),
+		"cli.data":       reflect.ValueOf([]int{4, 3, 2}),
+		"cli.hosts":      reflect.ValueOf([]ServerInfo{{"defaultIp1", "defaultDc1"}}),
+		"cli.hosts.dc":   reflect.ValueOf(""),
+		"own.name":       reflect.ValueOf("defaultName"),
+		"own.bio":        reflect.ValueOf("defaultBio"),
+		"own.dob":        reflect.ValueOf(checkTime),
+		"database.srv":   reflect.ValueOf("defaultSrv"),
+		"database.comax": reflect.ValueOf(1111),
+		"database.ip":    reflect.ValueOf("defaultDatabaseIP"),
+		"database.dc":    reflect.ValueOf("defaultDatabaseDc"),
+		"servers":        reflect.ValueOf(ServerInfo{"defaultServersIp", "defaultServersDc"}),
+		"own.org":        reflect.ValueOf("defaultOrg"),
+		"database.ena":   reflect.ValueOf(false),
+		"servers.ip":     reflect.ValueOf("defaultServersIp"),
+		"servers.dc":     reflect.ValueOf("defaultServersDc"),
+	}
+	for flag, defaultVal := range defaultValmap {
+		// fmt.Printf("flag :%s\n", flag)
+		if !reflect.DeepEqual(checkValue[flag].Interface(), defaultVal.Interface()) {
+			t.Fatalf("Error flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], defaultVal)
+		}
+	}
+
+}
+
 func TestFillStructRecursive(t *testing.T) {
 	//creating parsers
 	parsers := map[reflect.Type]Parser{}
@@ -185,12 +241,12 @@ func TestFillStructRecursive(t *testing.T) {
 	parsers[reflect.TypeOf(true)] = &myBoolParser
 	parsers[reflect.TypeOf(1)] = &myIntParser
 	parsers[reflect.TypeOf([]int{})] = &myCustomParser
-	parsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
+	parsers[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
 	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
 
 	//Test all
 	var ex1 example
-	tagsmap := make(map[string]reflect.StructField)
+	tagsmap := make(map[string]StructField)
 
 	if err := getTypesRecursive(reflect.ValueOf(&ex1), tagsmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
@@ -231,12 +287,14 @@ func TestFillStructRecursive(t *testing.T) {
 	defaultEx.Owner.Organization = "defaultOrg"
 	defaultEx.Owner.Bio = "defaultBio"
 	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
+	defaultEx.Database.IP = "defaultDatabaseIP"
+	defaultEx.Database.Dc = "defaultDatabaseDc"
 	defaultEx.Database.Server = "defaultSrv"
 	defaultEx.Database.ConnectionMax = 1111
 	defaultEx.Database.Enable = false
 	defaultEx.Servers.IP = "defaultServersIp"
 	defaultEx.Servers.Dc = "defaultServersDc"
-	defaultEx.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}
+	defaultEx.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []ServerInfo{{"defaultIp1", "defaultDc1"}}}
 
 	defaultValmap := make(map[string]reflect.Value)
 	if err := getDefaultValue(reflect.ValueOf(&defaultEx), defaultValmap, ""); err != nil {
@@ -254,12 +312,14 @@ func TestFillStructRecursive(t *testing.T) {
 	check.Owner.Organization = "myOwnOrg"
 	check.Owner.Bio = "defaultBio"
 	check.Owner.Dob, _ = time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
+	check.Database.IP = "defaultDatabaseIP"
+	check.Database.Dc = "defaultDatabaseDc"
 	check.Database.Server = "mySrv"
 	check.Database.ConnectionMax = 1000
 	check.Database.Enable = true
 	check.Servers.IP = "defaultServersIp"
 	check.Servers.Dc = "defaultServersDc"
-	check.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}}
+	check.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []ServerInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}}
 	if !reflect.DeepEqual(ex1, check) {
 		if !reflect.DeepEqual(ex1.Clients, check.Clients) {
 			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Clients, ex1.Clients)
@@ -317,24 +377,24 @@ func (c *sliceIntValue) SetValue(val interface{}) {
 }
 
 // -- sliceServerValue format {IP,DC}
-type sliceServerValue []serverInfo
+type sliceServerValue []ServerInfo
 
 func (c *sliceServerValue) Set(s string) error {
 	tabStr := strings.FieldsFunc(s, bracket)
 	if len(tabStr) != 2 {
 		return errors.New("sliceServerValue cannot parse %s to serverInfo. Format {IP,DC}")
 	}
-	srv := serverInfo{IP: tabStr[0], Dc: tabStr[1]}
+	srv := ServerInfo{IP: tabStr[0], Dc: tabStr[1]}
 	*c = append(*c, srv)
 	return nil
 }
 
-func (c *sliceServerValue) Get() interface{} { return []serverInfo(*c) }
+func (c *sliceServerValue) Get() interface{} { return []ServerInfo(*c) }
 
 func (c *sliceServerValue) String() string { return fmt.Sprintf("%v", *c) }
 
 func (c *sliceServerValue) SetValue(val interface{}) {
-	*c = sliceServerValue(val.([]serverInfo))
+	*c = sliceServerValue(val.([]ServerInfo))
 }
 
 func TestLoadParsers(t *testing.T) {
@@ -343,7 +403,7 @@ func TestLoadParsers(t *testing.T) {
 	var mySliceIntParser sliceIntValue
 	var mySliceServerParser sliceServerValue
 	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
-	customParsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
+	customParsers[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
 	//Test loadParsers
 	parsers, err := loadParsers(customParsers)
 	if err != nil {
@@ -353,7 +413,7 @@ func TestLoadParsers(t *testing.T) {
 	//check
 	check := map[reflect.Type]Parser{}
 	check[reflect.TypeOf([]int{})] = &mySliceIntParser
-	check[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
+	check[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
 	var stringParser stringValue
 	var boolParser boolValue
 	var intParser intValue
@@ -369,13 +429,59 @@ func TestLoadParsers(t *testing.T) {
 
 }
 
+func TestPrintHelp(t *testing.T) {
+
+	//Test all
+	var ex1 example
+	flagmap := map[string]StructField{}
+
+	if err := getTypesRecursive(reflect.ValueOf(ex1), flagmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	var defaultEx example
+	defaultEx.Title = "defaultTitle"
+	defaultEx.Owner.Name = "defaultName"
+	defaultEx.Owner.Organization = "defaultOrg"
+	defaultEx.Owner.Bio = "defaultBio"
+	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
+	defaultEx.Database.IP = "defaultDatabaseIP"
+	defaultEx.Database.Dc = "defaultDatabaseDc"
+	defaultEx.Database.Server = "defaultSrv"
+	defaultEx.Database.ConnectionMax = 1111
+	defaultEx.Database.Enable = true
+	defaultEx.Servers.IP = "defaultServersIp"
+	defaultEx.Servers.Dc = "defaultServersDc"
+	defaultEx.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []ServerInfo{{"defaultIp1", "defaultDc1"}}}
+
+	defaultValmap := make(map[string]reflect.Value)
+	if err := getDefaultValue(reflect.ValueOf(&defaultEx), defaultValmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//creating parsers
+	customParsers := map[reflect.Type]Parser{}
+	var mySliceIntParser sliceIntValue
+	var mySliceServerParser sliceServerValue
+	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
+	customParsers[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
+	parsers, err := loadParsers(customParsers)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	if err := PrintHelp(flagmap, defaultValmap, parsers); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+}
+
 func TestLoad(t *testing.T) {
 	//creating parsers
 	customParsers := map[reflect.Type]Parser{}
 	var mySliceIntParser sliceIntValue
 	var mySliceServerParser sliceServerValue
 	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
-	customParsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
+	customParsers[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
 
 	//args
 	args := []string{
@@ -397,6 +503,10 @@ func TestLoad(t *testing.T) {
 		"--cli.data=4",
 	}
 
+	// args := []string{
+	// 	"--rien",
+	// }
+
 	//Test all
 	var ex1 example
 
@@ -406,16 +516,21 @@ func TestLoad(t *testing.T) {
 	defaultEx.Owner.Organization = "defaultOrg"
 	defaultEx.Owner.Bio = "defaultBio"
 	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
+	defaultEx.Database.IP = "defaultDatabaseIP"
+	defaultEx.Database.Dc = "defaultDatabaseDc"
 	defaultEx.Database.Server = "defaultSrv"
 	defaultEx.Database.ConnectionMax = 1111
 	defaultEx.Database.Enable = false
 	defaultEx.Servers.IP = "defaultServersIp"
 	defaultEx.Servers.Dc = "defaultServersDc"
-	defaultEx.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}
+	defaultEx.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []ServerInfo{{"defaultIp1", "defaultDc1"}}}
 
-	if err := Load(&ex1, &defaultEx, args, customParsers); err != nil {
+	if err := LoadWithParsers(&ex1, &defaultEx, args, customParsers); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
+	// if err := Load(&ex1, &defaultEx, args); err != nil {
+	// 	t.Errorf("Error %s", err.Error())
+	// }
 	//CHECK
 	var check example
 	check.Title = "myTitle"
@@ -423,109 +538,15 @@ func TestLoad(t *testing.T) {
 	check.Owner.Organization = "myOwnOrg"
 	check.Owner.Bio = "myOwnBio"
 	check.Owner.Dob, _ = time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
+	check.Database.IP = "defaultDatabaseIP"
+	check.Database.Dc = "defaultDatabaseDc"
 	check.Database.Server = "mySrv"
 	check.Database.ConnectionMax = 1000
 	check.Database.Enable = true
 	check.Servers.IP = "myServersIp"
 	check.Servers.Dc = "myServersDc"
-	check.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []serverInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}}
+	check.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []ServerInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}}
 	if !reflect.DeepEqual(ex1, check) {
 		t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check, ex1)
 	}
-}
-
-func TestGetDefaultValue(t *testing.T) {
-	//Test all
-	var defaultEx example
-	defaultEx.Title = "defaultTitle"
-	defaultEx.Owner.Name = "defaultName"
-	defaultEx.Owner.Organization = "defaultOrg"
-	defaultEx.Owner.Bio = "defaultBio"
-	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
-	defaultEx.Database.Server = "defaultSrv"
-	defaultEx.Database.ConnectionMax = 1111
-	defaultEx.Database.Enable = false
-	defaultEx.Servers.IP = "defaultServersIp"
-	defaultEx.Servers.Dc = "defaultServersDc"
-	defaultEx.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}
-
-	defaultValmap := make(map[string]reflect.Value)
-	if err := getDefaultValue(reflect.ValueOf(&defaultEx), defaultValmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-	// fmt.Printf("defaultValmap : %s\n", defaultValmap)
-
-	checkTime, _ := time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
-	checkValue := map[string]reflect.Value{
-		"title":          reflect.ValueOf("defaultTitle"),
-		"t":              reflect.ValueOf("defaultTitle"),
-		"own":            reflect.ValueOf(ownerInfo{"defaultName", "defaultOrg", "defaultBio", checkTime}),
-		"cli":            reflect.ValueOf(&clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}),
-		"c":              reflect.ValueOf(&clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}),
-		"cli.hosts.ip":   reflect.ValueOf(""),
-		"database":       reflect.ValueOf(databaseInfo{"defaultSrv", 1111, false}),
-		"cli.data":       reflect.ValueOf([]int{4, 3, 2}),
-		"cli.hosts":      reflect.ValueOf([]serverInfo{{"defaultIp1", "defaultDc1"}}),
-		"cli.hosts.dc":   reflect.ValueOf(""),
-		"own.name":       reflect.ValueOf("defaultName"),
-		"own.bio":        reflect.ValueOf("defaultBio"),
-		"own.dob":        reflect.ValueOf(checkTime),
-		"database.srv":   reflect.ValueOf("defaultSrv"),
-		"database.comax": reflect.ValueOf(1111),
-		"servers":        reflect.ValueOf(serverInfo{"defaultServersIp", "defaultServersDc"}),
-		"own.org":        reflect.ValueOf("defaultOrg"),
-		"database.ena":   reflect.ValueOf(false),
-		"servers.ip":     reflect.ValueOf("defaultServersIp"),
-		"servers.dc":     reflect.ValueOf("defaultServersDc"),
-	}
-	for flag, defaultVal := range defaultValmap {
-		if !reflect.DeepEqual(checkValue[flag].Interface(), defaultVal.Interface()) {
-			t.Fatalf("Error flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], defaultVal)
-		}
-	}
-
-}
-
-func TestPrintHelp(t *testing.T) {
-
-	//Test all
-	var ex1 example
-	flagmap := map[string]reflect.StructField{}
-
-	if err := getTypesRecursive(reflect.ValueOf(ex1), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-	var defaultEx example
-	defaultEx.Title = "defaultTitle"
-	defaultEx.Owner.Name = "defaultName"
-	defaultEx.Owner.Organization = "defaultOrg"
-	defaultEx.Owner.Bio = "defaultBio"
-	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
-	defaultEx.Database.Server = "defaultSrv"
-	defaultEx.Database.ConnectionMax = 1111
-	defaultEx.Database.Enable = true
-	defaultEx.Servers.IP = "defaultServersIp"
-	defaultEx.Servers.Dc = "defaultServersDc"
-	defaultEx.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []serverInfo{{"defaultIp1", "defaultDc1"}}}
-
-	defaultValmap := make(map[string]reflect.Value)
-	if err := getDefaultValue(reflect.ValueOf(&defaultEx), defaultValmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-
-	//creating parsers
-	customParsers := map[reflect.Type]Parser{}
-	var mySliceIntParser sliceIntValue
-	var mySliceServerParser sliceServerValue
-	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
-	customParsers[reflect.TypeOf([]serverInfo{})] = &mySliceServerParser
-	parsers, err := loadParsers(customParsers)
-	if err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-
-	if err := PrintHelp(flagmap, defaultValmap, parsers); err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-
 }

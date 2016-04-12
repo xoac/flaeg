@@ -18,7 +18,7 @@ func TestMergo(t *testing.T) {
 	struct1.Database.ConnectionMax = 1111
 	struct1.Database.Enable = false
 	struct1.Servers.Dc = "myServersDc"
-	struct1.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []serverInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}}
+	struct1.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []ServerInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}}
 
 	var struct2 example
 
@@ -28,7 +28,7 @@ func TestMergo(t *testing.T) {
 	struct2.Database.Enable = true
 	struct2.Servers.IP = "myServersIp2"
 	struct2.Servers.Dc = "myServersDc"
-	struct2.Clients = &clientInfo{Data: []int{1, 2, 3}, Hosts: []serverInfo{}}
+	struct2.Clients = &clientInfo{Data: []int{1, 2, 3}, Hosts: []ServerInfo{}}
 
 	//Fusion
 	//struct2 overwrite struc1
