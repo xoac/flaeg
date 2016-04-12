@@ -21,9 +21,15 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.Struct
 	name := key
 	switch objValue.Kind() {
 	case reflect.Struct:
-		name += objValue.Type().Name()
+
 		for i := 0; i < objValue.NumField(); i++ {
-			if len(objValue.Type().Field(i).Tag.Get("description")) > 0 {
+			if objValue.Type().Field(i).Anonymous {
+				if err := getTypesRecursive(objValue.Field(i), flagmap, name); err != nil {
+					return err
+				}
+			} else if len(objValue.Type().Field(i).Tag.Get("description")) > 0 {
+
+				name += objValue.Type().Name()
 				fieldName := objValue.Type().Field(i).Name
 				if tag := objValue.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
 					fieldName = tag
@@ -43,10 +49,12 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.Struct
 					return errors.New("Tag already exists: " + name)
 				}
 				flagmap[strings.ToLower(name)] = objValue.Type().Field(i)
+
 				if err := getTypesRecursive(objValue.Field(i), flagmap, name); err != nil {
 					return err
 				}
 			}
+
 		}
 	case reflect.Ptr:
 		if len(key) > 0 {
@@ -148,12 +156,15 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 func fillStructRecursive(objValue reflect.Value, defaultValmap map[string]reflect.Value, valmap map[string]Parser, key string) error {
 	name := key
 	switch objValue.Kind() {
-
 	case reflect.Struct:
-		name += objValue.Type().Name()
-		for i := 0; i < objValue.Type().NumField(); i++ {
-			if tag := objValue.Type().Field(i).Tag.Get("description"); len(tag) > 0 {
 
+		for i := 0; i < objValue.Type().NumField(); i++ {
+			if objValue.Type().Field(i).Anonymous {
+				if err := fillStructRecursive(objValue.Field(i), defaultValmap, valmap, name); err != nil {
+					return err
+				}
+			} else if tag := objValue.Type().Field(i).Tag.Get("description"); len(tag) > 0 {
+				name += objValue.Type().Name()
 				fieldName := objValue.Type().Field(i).Name
 				if tag := objValue.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
 					fieldName = tag
