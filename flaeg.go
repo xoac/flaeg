@@ -1,4 +1,4 @@
-package main
+package flaeg
 
 import (
 	"errors"
@@ -305,12 +305,17 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 		}
 		printDescriptions = append(printDescriptions, field.Tag.Get("description"))
 		//flag on pointer ?
-		if defaultValmap[flag].Kind() != reflect.Ptr {
-			// Set defaultValue on parsers
-			parsers[field.Type].SetValue(defaultValmap[flag].Interface())
+		if defVal, ok := defaultValmap[flag]; ok {
+			if defVal.Kind() != reflect.Ptr {
+				// Set defaultValue on parsers
+				parsers[field.Type].SetValue(defaultValmap[flag].Interface())
+			}
+			printDefaultValues = append(printDefaultValues, parsers[field.Type].String())
+		} else {
+			//FIXME : no defaultValue
+			// parsers[field.Type].Set("")
+			printDefaultValues = append(printDefaultValues, "N/A")
 		}
-		printDefaultValues = append(printDefaultValues, parsers[field.Type].String())
-
 	}
 
 	// Get ProgramName
