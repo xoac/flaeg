@@ -258,10 +258,12 @@ func loadParsers(customParsers map[reflect.Type]Parser) (map[reflect.Type]Parser
 	var stringParser stringValue
 	var boolParser boolValue
 	var intParser intValue
+	var int64Parser int64Value
 	var timeParser timeValue
 	parsers[reflect.TypeOf("")] = &stringParser
 	parsers[reflect.TypeOf(true)] = &boolParser
 	parsers[reflect.TypeOf(1)] = &intParser
+	parsers[reflect.TypeOf(int64(1))] = &int64Parser
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	for rType, parser := range customParsers {
 		parsers[rType] = parser

@@ -20,7 +20,7 @@ type ownerInfo struct {
 type databaseInfo struct {
 	ServerInfo
 	Server        string `long:"srv" description:"overwrite database server ip address"`
-	ConnectionMax int    `long:"comax" description:"overwrite maximum number of connection on the database"`
+	ConnectionMax int64  `long:"comax" description:"overwrite maximum number of connection on the database"`
 	Enable        bool   `long:"ena" description:"overwrite database enable"`
 }
 type ServerInfo struct {
@@ -62,7 +62,7 @@ func TestGetTypesRecursive(t *testing.T) {
 		"own.bio":        reflect.TypeOf(""),
 		"own.dob":        reflect.TypeOf(time.Time{}),
 		"database.srv":   reflect.TypeOf(""),
-		"database.comax": reflect.TypeOf(0),
+		"database.comax": reflect.TypeOf(int64(0)),
 		"servers":        reflect.TypeOf(ServerInfo{}),
 		"own.org":        reflect.TypeOf(""),
 		"database.ena":   reflect.TypeOf(true),
@@ -83,13 +83,16 @@ func TestParseArgs(t *testing.T) {
 	var myStringParser stringValue
 	var myBoolParser boolValue
 	var myIntParser intValue
+	var myInt64Parser int64Value
 	var myCustomParser customValue
 	var mySliceServerParser sliceServerValue
 	var myTimeParser timeValue
 	parsers[reflect.TypeOf("")] = &myStringParser
 	parsers[reflect.TypeOf(true)] = &myBoolParser
 	parsers[reflect.TypeOf(1)] = &myIntParser
+	parsers[reflect.TypeOf(int64(1))] = &myInt64Parser
 	parsers[reflect.TypeOf([]int{})] = &myCustomParser
+
 	parsers[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
 	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
 
@@ -138,7 +141,7 @@ func TestParseArgs(t *testing.T) {
 	dob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	ownDobCheck := timeValue(dob)
 	databaseSrvCheck := stringValue("mySrv")
-	databaseComaxCheck := intValue(1000)
+	databaseComaxCheck := int64Value(1000)
 	ownOrgCheck := stringValue("myOwnOrg")
 	databaseEnaCheck := boolValue(true)
 	serversIPCheck := stringValue("myServersIp")
@@ -210,7 +213,7 @@ func TestGetDefaultValue(t *testing.T) {
 		"own.bio":        reflect.ValueOf("defaultBio"),
 		"own.dob":        reflect.ValueOf(checkTime),
 		"database.srv":   reflect.ValueOf("defaultSrv"),
-		"database.comax": reflect.ValueOf(1111),
+		"database.comax": reflect.ValueOf(int64(1111)),
 		"database.ip":    reflect.ValueOf("defaultDatabaseIP"),
 		"database.dc":    reflect.ValueOf("defaultDatabaseDc"),
 		"servers":        reflect.ValueOf(ServerInfo{"defaultServersIp", "defaultServersDc"}),
@@ -234,12 +237,14 @@ func TestFillStructRecursive(t *testing.T) {
 	var myStringParser stringValue
 	var myBoolParser boolValue
 	var myIntParser intValue
+	var myInt64Parser int64Value
 	var myCustomParser sliceIntValue
 	var mySliceServerParser sliceServerValue
 	var myTimeParser timeValue
 	parsers[reflect.TypeOf("")] = &myStringParser
 	parsers[reflect.TypeOf(true)] = &myBoolParser
 	parsers[reflect.TypeOf(1)] = &myIntParser
+	parsers[reflect.TypeOf(int64(1))] = &myInt64Parser
 	parsers[reflect.TypeOf([]int{})] = &myCustomParser
 	parsers[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
 	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
@@ -417,10 +422,12 @@ func TestLoadParsers(t *testing.T) {
 	var stringParser stringValue
 	var boolParser boolValue
 	var intParser intValue
+	var int64Parser int64Value
 	var timeParser timeValue
 	check[reflect.TypeOf("")] = &stringParser
 	check[reflect.TypeOf(true)] = &boolParser
 	check[reflect.TypeOf(1)] = &intParser
+	check[reflect.TypeOf(int64(1))] = &int64Parser
 	check[reflect.TypeOf(time.Now())] = &timeParser
 
 	if !reflect.DeepEqual(parsers, check) {
