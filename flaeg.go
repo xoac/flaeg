@@ -186,15 +186,11 @@ func fillStructRecursive(objValue reflect.Value, defaultValmap map[string]reflec
 				} else {
 					name = key + "." + strings.ToLower(fieldName)
 				}
-
 				if objValue.Field(i).Kind() == reflect.Ptr {
 					if err := fillStructRecursive(objValue.Field(i), defaultValmap, valmap, name); err != nil {
 						return err
 					}
-					return nil
-				}
-
-				if val, ok := valmap[name]; ok {
+				} else if val, ok := valmap[name]; ok {
 					if err := setFields(objValue.Field(i), val); err != nil {
 						return err
 					}
@@ -210,6 +206,7 @@ func fillStructRecursive(objValue reflect.Value, defaultValmap map[string]reflec
 		}
 
 	case reflect.Ptr:
+
 		if objValue.IsNil() {
 			contains := false
 
@@ -395,13 +392,16 @@ func LoadWithParsers(config interface{}, defaultValue interface{}, args []string
 	if err := getDefaultValue(reflect.ValueOf(defaultValue), defaultValmap, ""); err != nil {
 		return err
 	}
-	for flag := range defaultValmap {
-		fmt.Println(flag)
-	}
+	// for flag := range defaultValmap {
+	// 	fmt.Println(flag)
+	// }
 	valmap, err := parseArgs(args, tagsmap, parsers)
 	if err != nil {
 		return PrintError(err, tagsmap, defaultValmap, parsers)
 	}
+	// for flag, val := range valmap {
+	// 	fmt.Printf("%s : %+s (default : %+v)\n", flag, val, defaultValmap[flag])
+	// }
 	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
 		return err
 	}
