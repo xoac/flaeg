@@ -94,7 +94,9 @@ func parseArgs(args []string, flagmap map[string]StructField, parsers map[reflec
 		//for _, flag := range flags {
 		//structField := flagmap[flag]
 		if parser, ok := parsers[structField.Type]; ok {
-			newparser := reflect.New(reflect.TypeOf(parser).Elem()).Interface().(Parser)
+			newparserValue := reflect.New(reflect.TypeOf(parser).Elem())
+			newparserValue.Elem().Set(reflect.ValueOf(parser).Elem())
+			newparser := newparserValue.Interface().(Parser)
 			if len(structField.Short) == 1 {
 				// fmt.Printf("short : %s long : %s\n", structField.Short, flag)
 				flagSet.VarP(newparser, flag, structField.Short, structField.Tag.Get("description"))
@@ -384,6 +386,11 @@ func LoadWithParsers(config interface{}, defaultValue interface{}, args []string
 	if err != nil {
 		return err
 	}
+
+	// for typ, parser := range parsers {
+	// 	fmt.Printf("%s : %+v\n", typ.Name(), parser)
+	// }
+
 	tagsmap := make(map[string]StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), tagsmap, ""); err != nil {
 		return err

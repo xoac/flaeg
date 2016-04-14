@@ -419,15 +419,31 @@ func TestLoadParsers(t *testing.T) {
 	check := map[reflect.Type]Parser{}
 	check[reflect.TypeOf([]int{})] = &mySliceIntParser
 	check[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
-	var stringParser stringValue
 	var boolParser boolValue
-	var intParser intValue
-	var int64Parser int64Value
-	var timeParser timeValue
-	check[reflect.TypeOf("")] = &stringParser
 	check[reflect.TypeOf(true)] = &boolParser
+
+	var intParser intValue
 	check[reflect.TypeOf(1)] = &intParser
+
+	var int64Parser int64Value
 	check[reflect.TypeOf(int64(1))] = &int64Parser
+
+	var uintParser uintValue
+	check[reflect.TypeOf(uint(1))] = &uintParser
+
+	var uint64Parser uint64Value
+	check[reflect.TypeOf(uint64(1))] = &uint64Parser
+
+	var stringParser stringValue
+	check[reflect.TypeOf("")] = &stringParser
+
+	var float64Parser float64Value
+	check[reflect.TypeOf(float64(1.5))] = &float64Parser
+
+	var durationParser durationValue
+	check[reflect.TypeOf(time.Second)] = &durationParser
+
+	var timeParser timeValue
 	check[reflect.TypeOf(time.Now())] = &timeParser
 
 	if !reflect.DeepEqual(parsers, check) {
