@@ -159,6 +159,10 @@ func getDefaultValue(defaultValue reflect.Value, defaultValmap map[string]reflec
 			if err := getDefaultValue(defaultValue.Elem(), defaultValmap, name); err != nil {
 				return err
 			}
+
+		} else {
+			defaultValmap[name] = reflect.New(defaultValue.Type().Elem())
+
 		}
 	default:
 		return nil

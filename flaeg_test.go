@@ -546,7 +546,7 @@ func TestLoad(t *testing.T) {
 	defaultEx.Database.Enable = false
 	defaultEx.Servers.IP = "defaultServersIp"
 	defaultEx.Servers.Dc = "defaultServersDc"
-	defaultEx.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []ServerInfo{{"defaultIp1", "defaultDc1"}}}
+	// defaultEx.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []ServerInfo{{"defaultIp1", "defaultDc1"}}}
 
 	if err := LoadWithParsers(&ex1, &defaultEx, args, customParsers); err != nil {
 		t.Errorf("Error %s", err.Error())
