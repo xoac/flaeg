@@ -102,6 +102,8 @@ func parseArgs(args []string, flagmap map[string]StructField, parsers map[reflec
 				flagSet.Var(newparser, flag, structField.Tag.Get("description"))
 			}
 			newParsers[flag] = newparser
+		} else {
+			fmt.Printf("No parser for type %s\n", structField.Type)
 		}
 	}
 
@@ -253,18 +255,37 @@ func setFields(fieldValue reflect.Value, val Parser) error {
 }
 
 //loadParsers loads default parsers and custom parsers given as parameter. Return a map [reflect.Type]parsers
+// bool, int, int64, uint, uint64, float64,
 func loadParsers(customParsers map[reflect.Type]Parser) (map[reflect.Type]Parser, error) {
 	parsers := map[reflect.Type]Parser{}
-	var stringParser stringValue
+
 	var boolParser boolValue
-	var intParser intValue
-	var int64Parser int64Value
-	var timeParser timeValue
-	parsers[reflect.TypeOf("")] = &stringParser
 	parsers[reflect.TypeOf(true)] = &boolParser
+
+	var intParser intValue
 	parsers[reflect.TypeOf(1)] = &intParser
+
+	var int64Parser int64Value
 	parsers[reflect.TypeOf(int64(1))] = &int64Parser
+
+	var uintParser uintValue
+	parsers[reflect.TypeOf(uint(1))] = &uintParser
+
+	var uint64Parser uint64Value
+	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
+
+	var stringParser stringValue
+	parsers[reflect.TypeOf("")] = &stringParser
+
+	var float64Parser float64Value
+	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
+
+	var durationParser durationValue
+	parsers[reflect.TypeOf(time.Second)] = &durationParser
+
+	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
+
 	for rType, parser := range customParsers {
 		parsers[rType] = parser
 	}
@@ -373,6 +394,9 @@ func LoadWithParsers(config interface{}, defaultValue interface{}, args []string
 	defaultValmap := make(map[string]reflect.Value)
 	if err := getDefaultValue(reflect.ValueOf(defaultValue), defaultValmap, ""); err != nil {
 		return err
+	}
+	for flag := range defaultValmap {
+		fmt.Println(flag)
 	}
 	valmap, err := parseArgs(args, tagsmap, parsers)
 	if err != nil {
