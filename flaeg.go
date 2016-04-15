@@ -217,26 +217,26 @@ func fillStructRecursive(objValue reflect.Value, defaultValmap map[string]reflec
 
 	case reflect.Ptr:
 
-		if objValue.IsNil() {
+		if objValue.IsNil() || len(key) != 0 {
 			contains := false
-
-			if _, ok := valmap[name]; !ok {
-				for flag := range valmap {
-					// TODO replace by regexp
-					if strings.Contains(flag, name+".") {
-						contains = true
-						break
-					}
+			for flag := range valmap {
+				// TODO replace by regexp
+				if strings.Contains(flag, name+".") {
+					contains = true
+					break
 				}
-			} else {
-				contains = valmap[name].Get().(bool)
 			}
-
+			// TODO : refactor
 			if contains {
-				fmt.Printf("flag %s use default value %+v\n", name, defaultValmap[name])
+				// fmt.Printf("ptr flag %s use default value %+v\n", name, defaultValmap[name])
 				objValue.Set(defaultValmap[name])
 				if err := fillStructRecursive(objValue.Elem(), defaultValmap, valmap, name); err != nil {
 					return err
+				}
+			} else if _, ok := valmap[name]; ok {
+				if valmap[name].Get().(bool) == true {
+					// fmt.Printf("ptr flag %s use default value %+v\n", name, defaultValmap[name])
+					objValue.Set(defaultValmap[name])
 				}
 			}
 
