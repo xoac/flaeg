@@ -203,7 +203,7 @@ func fillStructRecursive(objValue reflect.Value, defaultValmap map[string]reflec
 							// fmt.Printf("flag %s use default value %+v\n", name, defVal)
 							objValue.Field(i).Set(defVal)
 						} else {
-							return errors.New(objValue.Field(i).Type().String() + " is not settable.")
+							return errors.New(objValue.Field(i).Type().Name() + " is not settable.")
 						}
 					} else {
 						fmt.Println("No default value for flag " + name)
@@ -229,14 +229,22 @@ func fillStructRecursive(objValue reflect.Value, defaultValmap map[string]reflec
 			// TODO : refactor
 			if contains {
 				// fmt.Printf("ptr flag %s use default value %+v\n", name, defaultValmap[name])
-				objValue.Set(defaultValmap[name])
+				if objValue.CanSet() {
+					objValue.Set(defaultValmap[name])
+				} else {
+					return errors.New(objValue.Type().Name() + " is not settable.")
+				}
 				if err := fillStructRecursive(objValue.Elem(), defaultValmap, valmap, name); err != nil {
 					return err
 				}
 			} else if _, ok := valmap[name]; ok {
 				if valmap[name].Get().(bool) == true {
 					// fmt.Printf("ptr flag %s use default value %+v\n", name, defaultValmap[name])
-					objValue.Set(defaultValmap[name])
+					if objValue.CanSet() {
+						objValue.Set(defaultValmap[name])
+					} else {
+						return errors.New(objValue.Type().Name() + " is not settable.")
+					}
 				}
 			}
 
