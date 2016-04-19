@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+//TODO refactor
 type StructField struct {
 	reflect.StructField
 	Short string
@@ -432,4 +433,84 @@ func LoadWithParsers(config interface{}, defaultValue interface{}, args []string
 //Some custom parsers may be given.
 func Load(config interface{}, defaultValue interface{}, args []string) error {
 	return LoadWithParsers(config, defaultValue, args, nil)
+}
+
+//Command struct contains program/command information (command name and description)
+//Config must be a pointer on the configutation struct to parse (it could be not empty)
+//DefaultConfig must be a pointer on the configutation default value and default pointers value
+//Run is the func which launch the program using initialized configuration struct
+type Command struct {
+	Name          string
+	Description   string
+	Config        interface{}
+	DefaultConfig interface{}
+	Run           func(InitalizedConfig interface{}) error
+}
+
+//Flaeg struct contains commands (at least the root one)
+//and row arguments (command and/or flags)
+//a map of custom parsers could be use
+type Flaeg struct {
+	rootCommand   *Command
+	commands      []*Command
+	args          []string
+	customParsers map[reflect.Type]Parser
+}
+
+//New creats and initialize a pointer on Field
+func New(rootCommand *Command, args []string) *Flaeg {
+	var f Flaeg
+	f.rootCommand = rootCommand
+	f.args = args
+	f.customParsers = map[reflect.Type]Parser{}
+	return &f
+}
+
+//AddCommand adds sub-command to the root command
+func (f *Flaeg) AddCommand(command *Command) {
+	f.commands = append(f.commands, command)
+}
+
+//AddParser adds custom parser for a type to the map of custom parsers
+func (f *Flaeg) AddParser(typ reflect.Type, parser Parser) {
+	f.customParsers[typ] = parser
+}
+
+// Run calls the command with flags given as agruments
+func (f *Flaeg) Run() error {
+	// split args
+	commandName := ""
+	commandArgs := f.args
+	cptCommands := 0
+	for i, arg := range f.args {
+		if string(arg[0]) != "-" {
+			commandName = arg
+			commandArgs = commandArgs[i+1:]
+			cptCommands++
+		}
+	}
+	// check args : 0 ou 1 sous commande
+	switch cptCommands {
+	// run sous commande si présente, ou root commande sinon
+	case 0:
+		//initialize Config
+		if err := LoadWithParsers(f.rootCommand.Config, f.rootCommand.DefaultConfig, commandArgs, f.customParsers); err != nil {
+			return err
+		}
+		return f.rootCommand.Run(f.rootCommand.Config) //Ref ?
+	case 1:
+		//look for command
+		for _, command := range f.commands {
+			if commandName == command.Name {
+				//initialize Config
+				if err := LoadWithParsers(command.Config, command.DefaultConfig, commandArgs, f.customParsers); err != nil {
+					return err
+				}
+				return command.Run(command.Config)
+			}
+		}
+		return fmt.Errorf("Command %s not found", commandName)
+	default:
+		return fmt.Errorf("Too many commands called, expexted 0 or 1 got %d", cptCommands)
+	}
 }
