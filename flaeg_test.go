@@ -306,7 +306,7 @@ func TestFillStructRecursive(t *testing.T) {
 		t.Errorf("Error %s", err.Error())
 	}
 
-	if err := fillStructRecursive(reflect.ValueOf(&ex1), defaultValmap, pargs, ""); err != nil {
+	if err := fillStructRecursive(reflect.ValueOf(&ex1), defaultValmap, pargs, "", true); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
