@@ -76,6 +76,44 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]StructField, k
 	return nil
 }
 
+//loadParsers loads default parsers and custom parsers given as parameter. Return a map [reflect.Type]parsers
+// bool, int, int64, uint, uint64, float64,
+func loadParsers(customParsers map[reflect.Type]Parser) (map[reflect.Type]Parser, error) {
+	parsers := map[reflect.Type]Parser{}
+
+	var boolParser boolValue
+	parsers[reflect.TypeOf(true)] = &boolParser
+
+	var intParser intValue
+	parsers[reflect.TypeOf(1)] = &intParser
+
+	var int64Parser int64Value
+	parsers[reflect.TypeOf(int64(1))] = &int64Parser
+
+	var uintParser uintValue
+	parsers[reflect.TypeOf(uint(1))] = &uintParser
+
+	var uint64Parser uint64Value
+	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
+
+	var stringParser stringValue
+	parsers[reflect.TypeOf("")] = &stringParser
+
+	var float64Parser float64Value
+	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
+
+	var durationParser durationValue
+	parsers[reflect.TypeOf(time.Second)] = &durationParser
+
+	var timeParser timeValue
+	parsers[reflect.TypeOf(time.Now())] = &timeParser
+
+	for rType, parser := range customParsers {
+		parsers[rType] = parser
+	}
+	return parsers, nil
+}
+
 //ParseArgs : parses args return valmap map[flag]Getter, using parsers map[type]Getter
 //args must be formated as like as flag documentation. See https://golang.org/pkg/flag
 func parseArgs(args []string, flagmap map[string]StructField, parsers map[reflect.Type]Parser) (map[string]Parser, error) {
@@ -264,44 +302,6 @@ func setFields(fieldValue reflect.Value, val Parser) error {
 		return errors.New(fieldValue.Type().String() + " is not settable.")
 	}
 	return nil
-}
-
-//loadParsers loads default parsers and custom parsers given as parameter. Return a map [reflect.Type]parsers
-// bool, int, int64, uint, uint64, float64,
-func loadParsers(customParsers map[reflect.Type]Parser) (map[reflect.Type]Parser, error) {
-	parsers := map[reflect.Type]Parser{}
-
-	var boolParser boolValue
-	parsers[reflect.TypeOf(true)] = &boolParser
-
-	var intParser intValue
-	parsers[reflect.TypeOf(1)] = &intParser
-
-	var int64Parser int64Value
-	parsers[reflect.TypeOf(int64(1))] = &int64Parser
-
-	var uintParser uintValue
-	parsers[reflect.TypeOf(uint(1))] = &uintParser
-
-	var uint64Parser uint64Value
-	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
-
-	var stringParser stringValue
-	parsers[reflect.TypeOf("")] = &stringParser
-
-	var float64Parser float64Value
-	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
-
-	var timeParser timeValue
-	parsers[reflect.TypeOf(time.Now())] = &timeParser
-
-	for rType, parser := range customParsers {
-		parsers[rType] = parser
-	}
-	return parsers, nil
 }
 
 //PrintHelp generates and prints command line help

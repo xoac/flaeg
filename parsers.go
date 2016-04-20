@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+//TODO : add parsers on all types in https://golang.org/pkg/builtin/
+
 // Parser is an interface that allows the contents of a flag.Getter to be set.
 type Parser interface {
 	flag.Getter

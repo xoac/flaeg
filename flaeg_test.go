@@ -1,395 +1,122 @@
 package flaeg
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
 )
 
-//example of complex Struct
-type ownerInfo struct {
-	Name         string    `long:"name" description:"overwrite owner name"`
-	Organization string    `long:"org" description:"overwrite owner organisation"`
-	Bio          string    `long:"bio" description:"overwrite owner biography"`
-	Dob          time.Time `long:"dob" description:"overwrite owner date of birth"`
+//Configuration is a struct which contains all differents type to field
+//using parsers on string, time.Duration, pointer, bool, int, int64, time.Time, float64
+type Configuration struct {
+	Name     string        //no description struct tag, it will not be flaged
+	LogLevel string        `short:"l" description:"Log level"`      //string type field, short flag "-l"
+	Timeout  time.Duration `description:"Timeout duration"`         //time.Duration type field
+	Db       *DatabaseInfo `description:"Enable database"`          //pointer type field (on DatabaseInfo)
+	Owner    *OwnerInfo    `description:"Enable Owner description"` //another pointer type field (on OwnerInfo)
 }
-type databaseInfo struct {
-	ServerInfo
-	Server        string `long:"srv" description:"overwrite database server ip address"`
-	ConnectionMax int64  `long:"comax" description:"overwrite maximum number of connection on the database"`
-	Enable        bool   `long:"ena" description:"overwrite database enable"`
-}
+
 type ServerInfo struct {
-	IP string `long:"ip" description:"overwrite server ip address"`
-	Dc string `long:"dc" description:"overwrite server domain controller"`
+	Watch  bool   `description:"Watch device"`      //bool type
+	IP     string `description:"Server ip address"` //string type field
+	Load   int    `description:"Server load"`       //int type field
+	Load64 int64  `description:"Server load"`       //int64 type field, same description just to be sure it works
 }
-type clientInfo struct {
-	Data  []int        `long:"data" description:"overwrite clients data"`
-	Hosts []ServerInfo `description:"overwrite clients host names"`
+type DatabaseInfo struct {
+	ServerInfo             //Go throught annonymous field
+	ConnectionMax   uint   `long:"comax" description:"Number max of connections on database"` //uint type field, long flag "--comax"
+	ConnectionMax64 uint64 `description:"Number max of connections on database"`              //uint64 type field, same description just to be sure it works
 }
-type example struct {
-	Title    string       `short:"t" description:"overwrite title"` //
-	Owner    ownerInfo    `long:"own"  description:"overwrite server ip address"`
-	Database databaseInfo ` description:"overwrite server ip address"`
-	Servers  ServerInfo   `description:"overwrite servers info --servers.[ip|dc] [srv name]: value"`
-	Clients  *clientInfo  `long:"cli" short:"c"  description:"overwrite server ip address"`
+type OwnerInfo struct {
+	Name        *string      `description:"Owner name"`                     //pointer type field on string
+	DateOfBirth time.Time    `long:"dob" description:"Owner date of birth"` //time.Time type field, long flag "--dob"
+	Rate        float64      `description:"Owner rate"`                     //float64 type field
+	Servers     []ServerInfo `description:"Owner Server"`                   //slice of ServerInfo type field, need a custom parser
+}
+
+//newDefaultConfiguration returns a pointer on Configuration with default values
+func newDefaultConfiguration() *Configuration {
+	var db DatabaseInfo
+	db.Watch = true
+	db.IP = "192.168.1.2"
+	db.Load = 32
+	db.Load64 = 64
+	db.ConnectionMax = 3200000000            //max 4294967295
+	db.ConnectionMax64 = 6400000000000000000 //max 18446744073709551615
+
+	var own OwnerInfo
+	str := "DefaultOwnerNamePointer"
+	own.Name = &str
+	own.DateOfBirth, _ = time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
+	own.Rate = 0.111
+	own.Servers = []ServerInfo{
+		ServerInfo{IP: "192.168.1.2"},
+		ServerInfo{IP: "192.168.1.3"},
+		ServerInfo{IP: "192.168.1.4"},
+	}
+	return &Configuration{
+		Name:     "defaultName",
+		LogLevel: "ERROR",
+		Timeout:  time.Millisecond,
+		Db:       &db,
+		Owner:    &own,
+	}
+}
+
+//newConfiguration returns a pointer on Configuration initialized
+func newConfiguration() *Configuration {
+	var own OwnerInfo
+	str := "InitOwnerNamePointer"
+	own.Name = &str
+	own.DateOfBirth, _ = time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
+	own.Rate = 0.999
+	return &Configuration{
+		Name:     "initName",
+		LogLevel: "DEBUG",
+		Timeout:  time.Second,
+		Owner:    &own,
+	}
 }
 
 func TestGetTypesRecursive(t *testing.T) {
-	//Test all
-	var ex1 example
-	namesmap := make(map[string]StructField)
-	if err := getTypesRecursive(reflect.ValueOf(&ex1), namesmap, ""); err != nil {
+	config := newConfiguration()
+	flagmap := make(map[string]StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
-
+	// Check only type
 	checkType := map[string]reflect.Type{
-		"title":          reflect.TypeOf(""),
-		"own":            reflect.TypeOf(ownerInfo{}),
-		"cli":            reflect.TypeOf(true),
-		"cli.hosts.ip":   reflect.TypeOf(""),
-		"database":       reflect.TypeOf(databaseInfo{}),
-		"database.ip":    reflect.TypeOf(""),
-		"database.dc":    reflect.TypeOf(""),
-		"cli.data":       reflect.TypeOf([]int{}),
-		"cli.hosts":      reflect.TypeOf([]ServerInfo{}),
-		"cli.hosts.dc":   reflect.TypeOf(""),
-		"own.name":       reflect.TypeOf(""),
-		"own.bio":        reflect.TypeOf(""),
-		"own.dob":        reflect.TypeOf(time.Time{}),
-		"database.srv":   reflect.TypeOf(""),
-		"database.comax": reflect.TypeOf(int64(0)),
-		"servers":        reflect.TypeOf(ServerInfo{}),
-		"own.org":        reflect.TypeOf(""),
-		"database.ena":   reflect.TypeOf(true),
-		"servers.ip":     reflect.TypeOf(""),
-		"servers.dc":     reflect.TypeOf(""),
+		"loglevel":           reflect.TypeOf(""),
+		"timeout":            reflect.TypeOf(time.Second),
+		"db":                 reflect.TypeOf(true),
+		"db.watch":           reflect.TypeOf(true),
+		"db.ip":              reflect.TypeOf(""),
+		"db.load":            reflect.TypeOf(0),
+		"db.load64":          reflect.TypeOf(int64(0)),
+		"db.comax":           reflect.TypeOf(uint(0)),
+		"db.connectionmax64": reflect.TypeOf(uint64(0)),
+		"owner":              reflect.TypeOf(true),
+		"owner.name":         reflect.TypeOf(true),
+		"owner.dob":          reflect.TypeOf(time.Now()),
+		"owner.rate":         reflect.TypeOf(float64(1.1)),
+		"owner.servers":      reflect.TypeOf([]ServerInfo{}),
 	}
-	for name, field := range namesmap {
+	for name, field := range flagmap {
+		// fmt.Printf("%s : %+v\n", name, field)
 		if checkType[name] != field.Type {
 			t.Fatalf("Tag : %s, got %s expected %s\n", name, field.Type, checkType[name])
 		}
 	}
-
 }
 
-func TestParseArgs(t *testing.T) {
-	//creating parsers
-	parsers := map[reflect.Type]Parser{}
-	var myStringParser stringValue
-	var myBoolParser boolValue
-	var myIntParser intValue
-	var myInt64Parser int64Value
-	var myCustomParser customValue
-	var mySliceServerParser sliceServerValue
-	var myTimeParser timeValue
-	parsers[reflect.TypeOf("")] = &myStringParser
-	parsers[reflect.TypeOf(true)] = &myBoolParser
-	parsers[reflect.TypeOf(1)] = &myIntParser
-	parsers[reflect.TypeOf(int64(1))] = &myInt64Parser
-	parsers[reflect.TypeOf([]int{})] = &myCustomParser
-
-	parsers[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
-	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
-
-	//Test all
-	var ex1 example
-	tagsmap := make(map[string]StructField)
-
-	if err := getTypesRecursive(reflect.ValueOf(ex1), tagsmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-
-	args := []string{
-		// "-title", "myTitle",
-		// "own",
-		// "cli":
-		"--cli.hosts={myIp1,myDc1}",
-		"-tmyTitle",
-		// "-database",""
-		"--cli.data={1,2,3,4}",
-		// "-cli.hosts",""
-		"--cli.hosts={myIp2,myDc2}",
-		"--own.name=myOwnName",
-		"--own.bio=myOwnBio",
-		"--own.dob=1979-05-27T07:32:00Z",
-		"--database.srv=mySrv",
-		"--database.comax=1000",
-		// "-servers":
-		"--own.org=myOwnOrg",
-		"--database.ena", //=true"
-		"--servers.ip=myServersIp",
-		"--servers.dc=myServersDc",
-	}
-	pargs, err := parseArgs(args, tagsmap, parsers)
-	if err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-	// fmt.Printf("result:%+v\n", pargs)
-
-	//CHECK
-
-	cliHostsCheck := sliceServerValue([]ServerInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}})
-	tCheck := stringValue("myTitle")
-	cliDataCheck := customValue([]int{1, 2, 3, 4})
-	ownNameCheck := stringValue("myOwnName")
-	ownBioCheck := stringValue("myOwnBio")
-	dob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
-	ownDobCheck := timeValue(dob)
-	databaseSrvCheck := stringValue("mySrv")
-	databaseComaxCheck := int64Value(1000)
-	ownOrgCheck := stringValue("myOwnOrg")
-	databaseEnaCheck := boolValue(true)
-	serversIPCheck := stringValue("myServersIp")
-	serversDcCheck := stringValue("myServersDc")
-
-	checkParse := map[string]Parser{
-
-		// "title", "myTitle",
-		// "own",
-		// "cli":
-		"cli.hosts": &cliHostsCheck,
-		"title":     &tCheck,
-		// "database",""
-		"cli.data": &cliDataCheck,
-		// "cli.hosts",""
-		"own.name":       &ownNameCheck,
-		"own.bio":        &ownBioCheck,
-		"own.dob":        &ownDobCheck,
-		"database.srv":   &databaseSrvCheck,
-		"database.comax": &databaseComaxCheck,
-		// "servers":
-		"own.org":      &ownOrgCheck,
-		"database.ena": &databaseEnaCheck, //=true"
-		"servers.ip":   &serversIPCheck,
-		"servers.dc":   &serversDcCheck,
-	}
-
-	for tag, inter := range pargs {
-		if !reflect.DeepEqual(checkParse[tag].Get(), inter.Get()) {
-			t.Fatalf("Error tag %s : expected %+v got %+v", tag, checkParse[tag].Get(), inter.Get())
-		}
-	}
-}
-
-func TestGetDefaultValue(t *testing.T) {
-	//Test all
-	var defaultEx example
-	defaultEx.Title = "defaultTitle"
-	defaultEx.Owner.Name = "defaultName"
-	defaultEx.Owner.Organization = "defaultOrg"
-	defaultEx.Owner.Bio = "defaultBio"
-	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
-	defaultEx.Database.IP = "defaultDatabaseIP"
-	defaultEx.Database.Dc = "defaultDatabaseDc"
-	defaultEx.Database.Server = "defaultSrv"
-	defaultEx.Database.ConnectionMax = 1111
-	defaultEx.Database.Enable = false
-	defaultEx.Servers.IP = "defaultServersIp"
-	defaultEx.Servers.Dc = "defaultServersDc"
-	defaultEx.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []ServerInfo{{"defaultIp1", "defaultDc1"}}}
-
-	defaultValmap := make(map[string]reflect.Value)
-	if err := getDefaultValue(reflect.ValueOf(&defaultEx), defaultValmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-	// fmt.Printf("defaultValmap : %s\n", defaultValmap)
-
-	checkTime, _ := time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
-	checkValue := map[string]reflect.Value{
-		"title":          reflect.ValueOf("defaultTitle"),
-		"own":            reflect.ValueOf(ownerInfo{"defaultName", "defaultOrg", "defaultBio", checkTime}),
-		"cli":            reflect.ValueOf(&clientInfo{Data: []int{4, 3, 2}, Hosts: []ServerInfo{{"defaultIp1", "defaultDc1"}}}),
-		"cli.hosts.ip":   reflect.ValueOf(""),
-		"database":       reflect.ValueOf(databaseInfo{ServerInfo{"defaultDatabaseIP", "defaultDatabaseDc"}, "defaultSrv", 1111, false}),
-		"cli.data":       reflect.ValueOf([]int{4, 3, 2}),
-		"cli.hosts":      reflect.ValueOf([]ServerInfo{{"defaultIp1", "defaultDc1"}}),
-		"cli.hosts.dc":   reflect.ValueOf(""),
-		"own.name":       reflect.ValueOf("defaultName"),
-		"own.bio":        reflect.ValueOf("defaultBio"),
-		"own.dob":        reflect.ValueOf(checkTime),
-		"database.srv":   reflect.ValueOf("defaultSrv"),
-		"database.comax": reflect.ValueOf(int64(1111)),
-		"database.ip":    reflect.ValueOf("defaultDatabaseIP"),
-		"database.dc":    reflect.ValueOf("defaultDatabaseDc"),
-		"servers":        reflect.ValueOf(ServerInfo{"defaultServersIp", "defaultServersDc"}),
-		"own.org":        reflect.ValueOf("defaultOrg"),
-		"database.ena":   reflect.ValueOf(false),
-		"servers.ip":     reflect.ValueOf("defaultServersIp"),
-		"servers.dc":     reflect.ValueOf("defaultServersDc"),
-	}
-	for flag, defaultVal := range defaultValmap {
-		// fmt.Printf("flag :%s\n", flag)
-		if !reflect.DeepEqual(checkValue[flag].Interface(), defaultVal.Interface()) {
-			t.Fatalf("Error flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], defaultVal)
-		}
-	}
-
-}
-
-func TestFillStructRecursive(t *testing.T) {
-	//creating parsers
-	parsers := map[reflect.Type]Parser{}
-	var myStringParser stringValue
-	var myBoolParser boolValue
-	var myIntParser intValue
-	var myInt64Parser int64Value
-	var myCustomParser sliceIntValue
-	var mySliceServerParser sliceServerValue
-	var myTimeParser timeValue
-	parsers[reflect.TypeOf("")] = &myStringParser
-	parsers[reflect.TypeOf(true)] = &myBoolParser
-	parsers[reflect.TypeOf(1)] = &myIntParser
-	parsers[reflect.TypeOf(int64(1))] = &myInt64Parser
-	parsers[reflect.TypeOf([]int{})] = &myCustomParser
-	parsers[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
-	parsers[reflect.TypeOf(time.Now())] = &myTimeParser
-
-	//Test all
-	var ex1 example
-	tagsmap := make(map[string]StructField)
-
-	if err := getTypesRecursive(reflect.ValueOf(&ex1), tagsmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-	args := []string{
-		// "-title", "myTitle",
-		// "own",
-		// "-cli",
-		"--cli.hosts={myIp1,myDc1}",
-		"-tmyTitle",
-		// "-database",""
-		// "-cli.hosts",""
-		"--cli.hosts={myIp2,myDc2}",
-		"--own.name=myOwnName",
-		// "-own.bio", "myOwnBio",
-		"--own.dob=1979-05-27T07:32:00Z",
-		"--database.srv=mySrv",
-		"--database.comax=1000",
-		// "-servers":
-		"--own.org=myOwnOrg",
-		"--database.ena", //=true"
-		// "-servers.ip", "myServersIp",
-		// "-servers.dc", "myServersDc",
-		// "-cli.data", "1",
-		// "-cli.data", "2",
-		// "-cli.data", "3",
-		// "-cli.data", "4",
-	}
-
-	pargs, err := parseArgs(args, tagsmap, parsers)
-	if err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-
-	var defaultEx example
-	defaultEx.Title = "defaultTitle"
-	defaultEx.Owner.Name = "defaultName"
-	defaultEx.Owner.Organization = "defaultOrg"
-	defaultEx.Owner.Bio = "defaultBio"
-	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
-	defaultEx.Database.IP = "defaultDatabaseIP"
-	defaultEx.Database.Dc = "defaultDatabaseDc"
-	defaultEx.Database.Server = "defaultSrv"
-	defaultEx.Database.ConnectionMax = 1111
-	defaultEx.Database.Enable = false
-	defaultEx.Servers.IP = "defaultServersIp"
-	defaultEx.Servers.Dc = "defaultServersDc"
-	defaultEx.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []ServerInfo{{"defaultIp1", "defaultDc1"}}}
-
-	defaultValmap := make(map[string]reflect.Value)
-	if err := getDefaultValue(reflect.ValueOf(&defaultEx), defaultValmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-
-	if err := fillStructRecursive(reflect.ValueOf(&ex1), defaultValmap, pargs, "", true); err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-
-	//CHECK
-	var check example
-	check.Title = "myTitle"
-	check.Owner.Name = "myOwnName"
-	check.Owner.Organization = "myOwnOrg"
-	check.Owner.Bio = "defaultBio"
-	check.Owner.Dob, _ = time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
-	check.Database.IP = "defaultDatabaseIP"
-	check.Database.Dc = "defaultDatabaseDc"
-	check.Database.Server = "mySrv"
-	check.Database.ConnectionMax = 1000
-	check.Database.Enable = true
-	check.Servers.IP = "defaultServersIp"
-	check.Servers.Dc = "defaultServersDc"
-	check.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []ServerInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}}
-	if !reflect.DeepEqual(ex1, check) {
-		if !reflect.DeepEqual(ex1.Clients, check.Clients) {
-			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Clients, ex1.Clients)
-		}
-		t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check, ex1)
-	}
-
-}
-
-// -- CUSTOM PARSERS
-// -- custom Value
-type customValue []int
-
-func bracket(r rune) bool {
-	return r == '{' || r == '}' || r == ',' || r == ';'
-}
-func (c *customValue) Set(s string) error {
-	tabStr := strings.FieldsFunc(s, bracket)
-	for _, str := range tabStr {
-		v, err := strconv.Atoi(str)
-		if err != nil {
-			return err
-		}
-		*c = append(*c, v)
-	}
-	return nil
-}
-
-func (c *customValue) Get() interface{} { return []int(*c) }
-
-func (c *customValue) String() string { return fmt.Sprintf("%v", *c) }
-
-func (c *customValue) SetValue(val interface{}) {
-	*c = customValue(val.([]int))
-}
-
-// -- sliceIntValue
-type sliceIntValue []int
-
-func (c *sliceIntValue) Set(s string) error {
-	v, err := strconv.Atoi(s)
-	if err != nil {
-		return err
-	}
-	*c = append(*c, v)
-	return nil
-}
-
-func (c *sliceIntValue) Get() interface{} { return []int(*c) }
-
-func (c *sliceIntValue) String() string { return fmt.Sprintf("%v", *c) }
-
-func (c *sliceIntValue) SetValue(val interface{}) {
-	*c = sliceIntValue(val.([]int))
-}
-
+//CUSTOM PARSER
 // -- sliceServerValue format {IP,DC}
 type sliceServerValue []ServerInfo
 
 func (c *sliceServerValue) Set(s string) error {
-	tabStr := strings.FieldsFunc(s, bracket)
-	if len(tabStr) != 2 {
-		return errors.New("sliceServerValue cannot parse %s to serverInfo. Format {IP,DC}")
-	}
-	srv := ServerInfo{IP: tabStr[0], Dc: tabStr[1]}
+	//could use RegExp
+	srv := ServerInfo{IP: s}
 	*c = append(*c, srv)
 	return nil
 }
@@ -403,173 +130,460 @@ func (c *sliceServerValue) SetValue(val interface{}) {
 }
 
 func TestLoadParsers(t *testing.T) {
-	//creating parsers
-	customParsers := map[reflect.Type]Parser{}
-	var mySliceIntParser sliceIntValue
-	var mySliceServerParser sliceServerValue
-	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
-	customParsers[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
-	//Test loadParsers
+	//inti customParsers
+	customParsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	//test
 	parsers, err := loadParsers(customParsers)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//Check
+	check := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	var boolParser boolValue
+	check[reflect.TypeOf(true)] = &boolParser
+	var intParser intValue
+	check[reflect.TypeOf(1)] = &intParser
+	var int64Parser int64Value
+	check[reflect.TypeOf(int64(1))] = &int64Parser
+	var uintParser uintValue
+	check[reflect.TypeOf(uint(1))] = &uintParser
+	var uint64Parser uint64Value
+	check[reflect.TypeOf(uint64(1))] = &uint64Parser
+	var stringParser stringValue
+	check[reflect.TypeOf("")] = &stringParser
+	var float64Parser float64Value
+	check[reflect.TypeOf(float64(1.5))] = &float64Parser
+	var durationParser durationValue
+	check[reflect.TypeOf(time.Second)] = &durationParser
+	var timeParser timeValue
+	check[reflect.TypeOf(time.Now())] = &timeParser
+
+	for typ, parser := range parsers {
+		if !reflect.DeepEqual(parser, check[typ]) {
+			t.Fatalf("Got %s expected %s\n", parser, check[typ])
+		}
+	}
+}
+
+//Test ParseArgs with trivial flags (ie not short, not on custom parser, not on pointer)
+func TestParseArgsTrivialFlags(t *testing.T) {
+	//We assume that getTypesRecursive works well
+	config := newConfiguration()
+	flagmap := make(map[string]StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	//init parsers
+	parsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	var boolParser boolValue
+	parsers[reflect.TypeOf(true)] = &boolParser
+	var intParser intValue
+	parsers[reflect.TypeOf(1)] = &intParser
+	var int64Parser int64Value
+	parsers[reflect.TypeOf(int64(1))] = &int64Parser
+	var uintParser uintValue
+	parsers[reflect.TypeOf(uint(1))] = &uintParser
+	var uint64Parser uint64Value
+	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
+	var stringParser stringValue
+	parsers[reflect.TypeOf("")] = &stringParser
+	var float64Parser float64Value
+	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
+	var durationParser durationValue
+	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var timeParser timeValue
+	parsers[reflect.TypeOf(time.Now())] = &timeParser
+	//init args
+	args := []string{
+		"--loglevel=OFF",
+		"--timeout=9ms",
+	}
+	//test
+	valmap, err := parseArgs(args, flagmap, parsers)
 	if err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
 	//check
-	check := map[reflect.Type]Parser{}
-	check[reflect.TypeOf([]int{})] = &mySliceIntParser
-	check[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
-	var boolParser boolValue
-	check[reflect.TypeOf(true)] = &boolParser
+	check := map[string]Parser{}
+	stringParser.SetValue("OFF")
+	check["loglevel"] = &stringParser
+	durationParser.SetValue(9 * time.Millisecond)
+	check["timeout"] = &durationParser
 
-	var intParser intValue
-	check[reflect.TypeOf(1)] = &intParser
-
-	var int64Parser int64Value
-	check[reflect.TypeOf(int64(1))] = &int64Parser
-
-	var uintParser uintValue
-	check[reflect.TypeOf(uint(1))] = &uintParser
-
-	var uint64Parser uint64Value
-	check[reflect.TypeOf(uint64(1))] = &uint64Parser
-
-	var stringParser stringValue
-	check[reflect.TypeOf("")] = &stringParser
-
-	var float64Parser float64Value
-	check[reflect.TypeOf(float64(1.5))] = &float64Parser
-
-	var durationParser durationValue
-	check[reflect.TypeOf(time.Second)] = &durationParser
-
-	var timeParser timeValue
-	check[reflect.TypeOf(time.Now())] = &timeParser
-
-	if !reflect.DeepEqual(parsers, check) {
-		t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check, parsers)
+	for flag, parser := range valmap {
+		if !reflect.DeepEqual(parser, check[flag]) {
+			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+		}
 	}
-
 }
 
-func TestPrintHelp(t *testing.T) {
-
-	//Test all
-	var ex1 example
-	flagmap := map[string]StructField{}
-
-	if err := getTypesRecursive(reflect.ValueOf(ex1), flagmap, ""); err != nil {
+//Test ParseArgs with short flags
+func TestParseArgsShortFlags(t *testing.T) {
+	//We assume that getTypesRecursive works well
+	config := newConfiguration()
+	flagmap := make(map[string]StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
-	var defaultEx example
-	defaultEx.Title = "defaultTitle"
-	defaultEx.Owner.Name = "defaultName"
-	defaultEx.Owner.Organization = "defaultOrg"
-	defaultEx.Owner.Bio = "defaultBio"
-	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
-	defaultEx.Database.IP = "defaultDatabaseIP"
-	defaultEx.Database.Dc = "defaultDatabaseDc"
-	defaultEx.Database.Server = "defaultSrv"
-	defaultEx.Database.ConnectionMax = 1111
-	defaultEx.Database.Enable = true
-	defaultEx.Servers.IP = "defaultServersIp"
-	defaultEx.Servers.Dc = "defaultServersDc"
-	defaultEx.Clients = &clientInfo{Data: []int{4, 3, 2}, Hosts: []ServerInfo{{"defaultIp1", "defaultDc1"}}}
-
-	defaultValmap := make(map[string]reflect.Value)
-	if err := getDefaultValue(reflect.ValueOf(&defaultEx), defaultValmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	//init parsers
+	parsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
-
-	//creating parsers
-	customParsers := map[reflect.Type]Parser{}
-	var mySliceIntParser sliceIntValue
-	var mySliceServerParser sliceServerValue
-	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
-	customParsers[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
-	parsers, err := loadParsers(customParsers)
+	var boolParser boolValue
+	parsers[reflect.TypeOf(true)] = &boolParser
+	var intParser intValue
+	parsers[reflect.TypeOf(1)] = &intParser
+	var int64Parser int64Value
+	parsers[reflect.TypeOf(int64(1))] = &int64Parser
+	var uintParser uintValue
+	parsers[reflect.TypeOf(uint(1))] = &uintParser
+	var uint64Parser uint64Value
+	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
+	var stringParser stringValue
+	parsers[reflect.TypeOf("")] = &stringParser
+	var float64Parser float64Value
+	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
+	var durationParser durationValue
+	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var timeParser timeValue
+	parsers[reflect.TypeOf(time.Now())] = &timeParser
+	//init args
+	args := []string{
+		"-lWARN",
+	}
+	//test
+	valmap, err := parseArgs(args, flagmap, parsers)
 	if err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
-	if err := PrintHelp(flagmap, defaultValmap, parsers); err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
+	//check
+	check := map[string]Parser{}
+	stringParser.Set("WARN")
+	check["loglevel"] = &stringParser
 
+	for flag, parser := range valmap {
+		if !reflect.DeepEqual(parser, check[flag]) {
+			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+		}
+	}
 }
 
-func TestLoad(t *testing.T) {
-	//creating parsers
-	customParsers := map[reflect.Type]Parser{}
-	var mySliceIntParser sliceIntValue
-	var mySliceServerParser sliceServerValue
-	customParsers[reflect.TypeOf([]int{})] = &mySliceIntParser
-	customParsers[reflect.TypeOf([]ServerInfo{})] = &mySliceServerParser
-
-	//args
-	args := []string{
-		"--cli.hosts={myIp1,myDc1}",
-		"-tmyTitle",
-		"--cli.hosts={myIp2,myDc2}",
-		"--own.name=myOwnName",
-		"--own.bio=myOwnBio",
-		"--own.dob=1979-05-27T07:32:00Z",
-		"--database.srv=mySrv",
-		"--database.comax=1000",
-		"--own.org=myOwnOrg",
-		"--database.ena", //=true"
-		"--servers.ip=myServersIp",
-		"--servers.dc=myServersDc",
-		"--cli.data=1",
-		"--cli.data=2",
-		"--cli.data=3",
-		"--cli.data=4",
-	}
-
-	// args := []string{
-	// 	"--rien",
-	// }
-
-	//Test all
-	var ex1 example
-
-	var defaultEx example
-	defaultEx.Title = "defaultTitle"
-	defaultEx.Owner.Name = "defaultName"
-	defaultEx.Owner.Organization = "defaultOrg"
-	defaultEx.Owner.Bio = "defaultBio"
-	defaultEx.Owner.Dob, _ = time.Parse(time.RFC3339, "1111-11-11T11:11:11Z")
-	defaultEx.Database.IP = "defaultDatabaseIP"
-	defaultEx.Database.Dc = "defaultDatabaseDc"
-	defaultEx.Database.Server = "defaultSrv"
-	defaultEx.Database.ConnectionMax = 1111
-	defaultEx.Database.Enable = false
-	defaultEx.Servers.IP = "defaultServersIp"
-	defaultEx.Servers.Dc = "defaultServersDc"
-	// defaultEx.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []ServerInfo{{"defaultIp1", "defaultDc1"}}}
-
-	if err := LoadWithParsers(&ex1, &defaultEx, args, customParsers); err != nil {
+//Test ParseArgs call Flag on pointers
+func TestParseArgsPointerFlag(t *testing.T) {
+	//We assume that getTypesRecursive works well
+	config := newConfiguration()
+	flagmap := make(map[string]StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
-	// if err := Load(&ex1, &defaultEx, args); err != nil {
-	// 	t.Errorf("Error %s", err.Error())
-	// }
-	//CHECK
-	var check example
-	check.Title = "myTitle"
-	check.Owner.Name = "myOwnName"
-	check.Owner.Organization = "myOwnOrg"
-	check.Owner.Bio = "myOwnBio"
-	check.Owner.Dob, _ = time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
-	check.Database.IP = "defaultDatabaseIP"
-	check.Database.Dc = "defaultDatabaseDc"
-	check.Database.Server = "mySrv"
-	check.Database.ConnectionMax = 1000
-	check.Database.Enable = true
-	check.Servers.IP = "myServersIp"
-	check.Servers.Dc = "myServersDc"
-	check.Clients = &clientInfo{Data: []int{1, 2, 3, 4}, Hosts: []ServerInfo{{"myIp1", "myDc1"}, {"myIp2", "myDc2"}}}
-	if !reflect.DeepEqual(ex1, check) {
-		t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check, ex1)
+	//init parsers
+	parsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	var boolParser boolValue
+	parsers[reflect.TypeOf(true)] = &boolParser
+	var intParser intValue
+	parsers[reflect.TypeOf(1)] = &intParser
+	var int64Parser int64Value
+	parsers[reflect.TypeOf(int64(1))] = &int64Parser
+	var uintParser uintValue
+	parsers[reflect.TypeOf(uint(1))] = &uintParser
+	var uint64Parser uint64Value
+	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
+	var stringParser stringValue
+	parsers[reflect.TypeOf("")] = &stringParser
+	var float64Parser float64Value
+	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
+	var durationParser durationValue
+	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var timeParser timeValue
+	parsers[reflect.TypeOf(time.Now())] = &timeParser
+	//init args
+	args := []string{
+		"--db",
+		"--owner",
+	}
+	//test
+	valmap, err := parseArgs(args, flagmap, parsers)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//check
+	check := map[string]Parser{}
+	checkDb := boolValue(true)
+	check["db"] = &checkDb
+	checkOwner := boolValue(true)
+	check["owner"] = &checkOwner
+
+	for flag, parser := range valmap {
+		if !reflect.DeepEqual(parser, check[flag]) {
+			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+		}
+	}
+}
+
+//Test ParseArgs with flags under a pointer and a long flag
+func TestParseArgsUnderPointerFlag(t *testing.T) {
+	//We assume that getTypesRecursive works well
+	config := newConfiguration()
+	flagmap := make(map[string]StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	//init parsers
+	parsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	var boolParser boolValue
+	parsers[reflect.TypeOf(true)] = &boolParser
+	var intParser intValue
+	parsers[reflect.TypeOf(1)] = &intParser
+	var int64Parser int64Value
+	parsers[reflect.TypeOf(int64(1))] = &int64Parser
+	var uintParser uintValue
+	parsers[reflect.TypeOf(uint(1))] = &uintParser
+	var uint64Parser uint64Value
+	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
+	var stringParser stringValue
+	parsers[reflect.TypeOf("")] = &stringParser
+	var float64Parser float64Value
+	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
+	var durationParser durationValue
+	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var timeParser timeValue
+	parsers[reflect.TypeOf(time.Now())] = &timeParser
+	//init args
+	args := []string{
+		"--owner.name",
+		"--db.comax=5000000000",
+	}
+	//test
+	valmap, err := parseArgs(args, flagmap, parsers)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//check
+	check := map[string]Parser{}
+	boolParser.SetValue(true)
+	check["owner.name"] = &boolParser
+	uintParser.SetValue(uint(5000000000))
+	check["db.comax"] = &uintParser
+	for flag, parser := range valmap {
+		if !reflect.DeepEqual(parser, check[flag]) {
+			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+		}
+	}
+}
+
+//Test ParseArgs with flag on pointer and flag under a pointer together
+func TestParseArgsPointerFlagUnderPointerFlag(t *testing.T) {
+	//We assume that getTypesRecursive works well
+	config := newConfiguration()
+	flagmap := make(map[string]StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	//init parsers
+	parsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	var boolParser boolValue
+	parsers[reflect.TypeOf(true)] = &boolParser
+	var intParser intValue
+	parsers[reflect.TypeOf(1)] = &intParser
+	var int64Parser int64Value
+	parsers[reflect.TypeOf(int64(1))] = &int64Parser
+	var uintParser uintValue
+	parsers[reflect.TypeOf(uint(1))] = &uintParser
+	var uint64Parser uint64Value
+	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
+	var stringParser stringValue
+	parsers[reflect.TypeOf("")] = &stringParser
+	var float64Parser float64Value
+	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
+	var durationParser durationValue
+	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var timeParser timeValue
+	parsers[reflect.TypeOf(time.Now())] = &timeParser
+	//init args
+	args := []string{
+		"--db",
+		"--db.watch",
+		"--db.connectionmax64=900",
+	}
+	//test
+	valmap, err := parseArgs(args, flagmap, parsers)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//check
+	check := map[string]Parser{}
+	boolParser.SetValue(true)
+	check["db"] = &boolParser
+	uint64Parser.SetValue(uint64(900))
+	check["db.connectionmax64"] = &uint64Parser
+	check["db.watch"] = &boolParser
+	for flag, parser := range valmap {
+		if !reflect.DeepEqual(parser, check[flag]) {
+			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+		}
+	}
+}
+
+//Test ParseArgs call Flag with custom parsers
+func TestParseArgsCustomFlag(t *testing.T) {
+	//We assume that getTypesRecursive works well
+	config := newConfiguration()
+	flagmap := make(map[string]StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	//init parsers
+	parsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	var boolParser boolValue
+	parsers[reflect.TypeOf(true)] = &boolParser
+	var intParser intValue
+	parsers[reflect.TypeOf(1)] = &intParser
+	var int64Parser int64Value
+	parsers[reflect.TypeOf(int64(1))] = &int64Parser
+	var uintParser uintValue
+	parsers[reflect.TypeOf(uint(1))] = &uintParser
+	var uint64Parser uint64Value
+	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
+	var stringParser stringValue
+	parsers[reflect.TypeOf("")] = &stringParser
+	var float64Parser float64Value
+	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
+	var durationParser durationValue
+	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var timeParser timeValue
+	parsers[reflect.TypeOf(time.Now())] = &timeParser
+	//init args
+	args := []string{
+		"--owner.servers=127.0.0.1",
+		"--owner.servers=1.0.0.1",
+	}
+	//test
+	valmap, err := parseArgs(args, flagmap, parsers)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//check
+	check := map[string]Parser{}
+	checkOwnerServers := sliceServerValue{
+		ServerInfo{IP: "127.0.0.1"},
+		ServerInfo{IP: "1.0.0.1"},
+	}
+	check["owner.servers"] = &checkOwnerServers
+
+	for flag, parser := range valmap {
+		if !reflect.DeepEqual(parser, check[flag]) {
+			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+		}
+	}
+}
+
+//Test ParseArgs with all flags possible with custom parsers
+func TestParseArgsAll(t *testing.T) {
+	//We assume that getTypesRecursive works well
+	config := newConfiguration()
+	flagmap := make(map[string]StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	//init parsers
+	parsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	var boolParser boolValue
+	parsers[reflect.TypeOf(true)] = &boolParser
+	var intParser intValue
+	parsers[reflect.TypeOf(1)] = &intParser
+	var int64Parser int64Value
+	parsers[reflect.TypeOf(int64(1))] = &int64Parser
+	var uintParser uintValue
+	parsers[reflect.TypeOf(uint(1))] = &uintParser
+	var uint64Parser uint64Value
+	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
+	var stringParser stringValue
+	parsers[reflect.TypeOf("")] = &stringParser
+	var float64Parser float64Value
+	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
+	var durationParser durationValue
+	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var timeParser timeValue
+	parsers[reflect.TypeOf(time.Now())] = &timeParser
+	//init args
+	args := []string{
+		"--loglevel=INFO",
+		"--timeout=1s",
+		"--db",
+		"--db.watch",
+		"--db.ip=192.168.0.1",
+		"--db.load=-1",
+		"--db.load64=-164",
+		"--db.comax=2",
+		"--db.connectionmax64=264",
+		"--owner",
+		"--owner.name",
+		"--owner.dob=2016-04-20T17:39:00Z",
+		"--owner.rate=0.222",
+		"--owner.servers=1.0.0.1",
+	}
+	//test
+	valmap, err := parseArgs(args, flagmap, parsers)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//check
+	check := map[string]Parser{}
+	stringParser.SetValue("INFO")
+	check["loglevel"] = &stringParser
+	durationParser.SetValue(time.Second)
+	check["timeout"] = &durationParser
+	boolParser.SetValue(true)
+	check["db"] = &boolParser
+	check["db.watch"] = &boolParser
+	checkDcIP := stringValue("192.168.0.1")
+	check["db.ip"] = &checkDcIP
+	intParser.SetValue(-1)
+	check["db.load"] = &intParser
+	int64Parser.SetValue(int64(-164))
+	check["db.load64"] = &int64Parser
+	uintParser.SetValue(uint(2))
+	check["db.comax"] = &uintParser
+	uint64Parser.SetValue(uint64(264))
+	check["db.connectionmax64"] = &uint64Parser
+	check["owner"] = &boolParser
+	check["owner.name"] = &boolParser
+	timeParser.Set("2016-04-20T17:39:00Z")
+	check["owner.dob"] = &timeParser
+	float64Parser.SetValue(0.222)
+	check["owner.rate"] = &float64Parser
+	checkOwnerServers := sliceServerValue{
+		ServerInfo{IP: "1.0.0.1"},
+	}
+	check["owner.servers"] = &checkOwnerServers
+
+	for flag, parser := range valmap {
+		if !reflect.DeepEqual(parser, check[flag]) {
+			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+		}
 	}
 }
