@@ -200,7 +200,12 @@ func getDefaultValue(defaultValue reflect.Value, defaultValmap map[string]reflec
 			}
 
 		} else {
-			defaultValmap[name] = reflect.New(defaultValue.Type().Elem())
+			instValue := reflect.New(defaultValue.Type().Elem())
+			defaultValmap[name] = instValue
+			// need under fields default value for pointer under field and Help
+			if err := getDefaultValue(instValue, defaultValmap, name); err != nil {
+				return err
+			}
 
 		}
 	default:
@@ -274,12 +279,16 @@ func fillStructRecursive(objValue reflect.Value, defaultValmap map[string]reflec
 		if contains && objValue.IsNil() {
 			needDefault = true
 		}
-		if needDefault {
-			fmt.Printf("ptr flag %s use default value %+v\n", name, defaultValmap[name])
-			if objValue.CanSet() {
-				objValue.Set(defaultValmap[name])
+		if needDefault && setDefaultValue {
+			if defVal, ok := defaultValmap[name]; ok {
+				if objValue.CanSet() {
+					// fmt.Printf("flag %s use default value %+v\n", name, defVal)
+					objValue.Set(defVal)
+				} else {
+					return errors.New(objValue.Type().Name() + " is not settable.")
+				}
 			} else {
-				return errors.New(objValue.Type().Name() + " is not settable.")
+				return fmt.Errorf("flag %s default value not provided\n", name)
 			}
 		}
 		if contains && !objValue.IsNil() {
