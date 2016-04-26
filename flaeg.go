@@ -356,8 +356,6 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 			}
 			printDefaultValues = append(printDefaultValues, parsers[field.Type].String())
 		} else {
-			//FIXME : no defaultValue
-			// parsers[field.Type].Set("")
 			printDefaultValues = append(printDefaultValues, "N/A")
 		}
 	}
