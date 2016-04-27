@@ -163,16 +163,16 @@ func parseArgs(args []string, flagmap map[string]StructField, parsers map[reflec
 	return valmap, nil
 }
 
-func getDefaultValue(defaultValue reflect.Value, defaultPointerValue reflect.Value, defaultValmap map[string]reflect.Value, key string) error {
-	if defaultValue.Type() != defaultPointerValue.Type() {
-		return fmt.Errorf("Parameters defaultValue and defaultPointerValue must be the same struct. defaultValue type : %s is not defaultPointerValue type : %s", defaultValue.Type().String(), defaultPointerValue.Type().String())
+func getDefaultValue(defaultValue reflect.Value, defaultPointersValue reflect.Value, defaultValmap map[string]reflect.Value, key string) error {
+	if defaultValue.Type() != defaultPointersValue.Type() {
+		return fmt.Errorf("Parameters defaultValue and defaultPointersValue must be the same struct. defaultValue type : %s is not defaultPointersValue type : %s", defaultValue.Type().String(), defaultPointersValue.Type().String())
 	}
 	name := key
 	switch defaultValue.Kind() {
 	case reflect.Struct:
 		for i := 0; i < defaultValue.NumField(); i++ {
 			if defaultValue.Type().Field(i).Anonymous {
-				if err := getDefaultValue(defaultValue.Field(i), defaultPointerValue.Field(i), defaultValmap, name); err != nil {
+				if err := getDefaultValue(defaultValue.Field(i), defaultPointersValue.Field(i), defaultValmap, name); err != nil {
 					return err
 				}
 			} else if len(defaultValue.Type().Field(i).Tag.Get("description")) > 0 {
@@ -190,27 +190,27 @@ func getDefaultValue(defaultValue reflect.Value, defaultPointerValue reflect.Val
 					return errors.New("Tag already exists: " + name)
 				}
 				defaultValmap[name] = defaultValue.Field(i)
-				if err := getDefaultValue(defaultValue.Field(i), defaultPointerValue.Field(i), defaultValmap, name); err != nil {
+				if err := getDefaultValue(defaultValue.Field(i), defaultPointersValue.Field(i), defaultValmap, name); err != nil {
 					return err
 				}
 			}
 		}
 	case reflect.Ptr:
-		if !defaultPointerValue.IsNil() {
+		if !defaultPointersValue.IsNil() {
 			if len(key) != 0 {
-				defaultValmap[name] = defaultPointerValue
+				defaultValmap[name] = defaultPointersValue
 			}
 			if !defaultValue.IsNil() {
-				if err := getDefaultValue(defaultValue.Elem(), defaultPointerValue.Elem(), defaultValmap, name); err != nil {
+				if err := getDefaultValue(defaultValue.Elem(), defaultPointersValue.Elem(), defaultValmap, name); err != nil {
 					return err
 				}
 			} else {
-				if err := getDefaultValue(defaultPointerValue.Elem(), defaultPointerValue.Elem(), defaultValmap, name); err != nil {
+				if err := getDefaultValue(defaultPointersValue.Elem(), defaultPointersValue.Elem(), defaultValmap, name); err != nil {
 					return err
 				}
 			}
 		} else {
-			instValue := reflect.New(defaultPointerValue.Type().Elem())
+			instValue := reflect.New(defaultPointersValue.Type().Elem())
 			if len(key) != 0 {
 				defaultValmap[name] = instValue
 			}
