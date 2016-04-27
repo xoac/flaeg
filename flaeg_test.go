@@ -36,7 +36,7 @@ type OwnerInfo struct {
 }
 
 //newDefaultConfiguration returns a pointer on Configuration with default values
-func newDefaultPointerConfiguration() *Configuration {
+func newDefaultPointersConfiguration() *Configuration {
 	var db DatabaseInfo
 	db.Watch = true
 	db.IP = "192.168.1.2"
@@ -538,7 +538,7 @@ func TestParseArgsAll(t *testing.T) {
 		"--db.connectionmax64=264",
 		"--owner",
 		"--owner.name",
-		"--owner.dob=2016-04-20T17:39:00Z",
+		"--owner.dob=checkDob",
 		"--owner.rate=0.222",
 		"--owner.servers=1.0.0.1",
 	}
@@ -586,9 +586,9 @@ func TestParseArgsAll(t *testing.T) {
 }
 
 //Test getDefaultValue on a full complex struct, with annonymous field, and not nil pointers
-func TestGetDefaultValueAll(t *testing.T) {
+func TestGetDefaultValueInitConfigAllDefault(t *testing.T) {
 	//INIT
-	defPointerConfig := newDefaultPointerConfiguration()
+	defPointerConfig := newDefaultPointersConfiguration()
 	config := newConfiguration()
 	defaultValmap := make(map[string]reflect.Value)
 	//TEST
@@ -625,7 +625,7 @@ func TestGetDefaultValueAll(t *testing.T) {
 }
 
 //Test getDefaultValue on a full complex struct, with annonymous field, nil pointers and not initialized fields
-func TestGetDefaultValueNil(t *testing.T) {
+func TestGetDefaultValueInitConfigNoDefault(t *testing.T) {
 	config := &Configuration{
 		Name: "defaultName", //useless field not flaged
 		// LogLevel is not initialized, default value will be go default value : ""
@@ -665,9 +665,9 @@ func TestGetDefaultValueNil(t *testing.T) {
 }
 
 //Test getDefaultValue on a empty config but with default values on pointers
-func TestGetDefaultValueEmpty(t *testing.T) {
+func TestGetDefaultNoConfigAllDefault(t *testing.T) {
 	config := &Configuration{}
-	defPointerConfig := newDefaultPointerConfiguration()
+	defPointerConfig := newDefaultPointersConfiguration()
 	defaultValmap := make(map[string]reflect.Value)
 	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defPointerConfig), defaultValmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
@@ -700,7 +700,7 @@ func TestGetDefaultValueEmpty(t *testing.T) {
 }
 
 //Test fillStructRecursive on empty config with trivial valmap field and without default values on pointers
-func TestFillStructRecursiveTrivialValmapNoDefault(t *testing.T) {
+func TestFillStructRecursiveNoConfigNoDefaultTrivialValmap(t *testing.T) {
 	config := &Configuration{}
 
 	//init parsers
@@ -767,7 +767,7 @@ func TestFillStructRecursiveTrivialValmapNoDefault(t *testing.T) {
 }
 
 //Test fillStructRecursive on empty config with all valmap field but without default values on pointers
-func TestFillStructRecursiveAllValmapNoDefault(t *testing.T) {
+func TestFillStructRecursiveNoConfigNoDefaultAllValmap(t *testing.T) {
 	config := &Configuration{}
 
 	//init parsers
@@ -876,7 +876,7 @@ func TestFillStructRecursiveAllValmapNoDefault(t *testing.T) {
 }
 
 //Test fillStructRecursive on empty config without valmap and without default values pointers
-func TestFillStructRecursiveNoValmapNoDefault(t *testing.T) {
+func TestFillStructRecursiveNoConfigAllDefaultNoValmap(t *testing.T) {
 	config := &Configuration{}
 
 	//init parsers
@@ -937,7 +937,7 @@ func TestFillStructRecursiveNoValmapNoDefault(t *testing.T) {
 }
 
 //Test fillStructRecursive on not-empty config with default values on pointers but without valmap field
-func TestFillStructRecursiveNoValmapAllDefault(t *testing.T) {
+func TestFillStructRecursiveInitConfigAllDefaultNoValmap(t *testing.T) {
 	config := newConfiguration()
 
 	//init parsers
@@ -1005,7 +1005,7 @@ func TestFillStructRecursiveNoValmapAllDefault(t *testing.T) {
 }
 
 //Test fillStructRecursive on empty config with only pointer valmap field and with default values on pointers
-func TestFillStructRecursiveAllPointerValmapAllDefault(t *testing.T) {
+func TestFillStructRecursiveInitConfigAllDefaultPointerValmap(t *testing.T) {
 	config := &Configuration{}
 
 	//init parsers
@@ -1063,7 +1063,7 @@ func TestFillStructRecursiveAllPointerValmapAllDefault(t *testing.T) {
 	}
 
 	//CHECK
-	check := newDefaultPointerConfiguration()
+	check := newDefaultPointersConfiguration()
 
 	if !reflect.DeepEqual(config, check) {
 		if !reflect.DeepEqual(config.Owner, check.Owner) {
@@ -1074,7 +1074,7 @@ func TestFillStructRecursiveAllPointerValmapAllDefault(t *testing.T) {
 }
 
 //Test fillStructRecursive on not-empty struc with only one pointer under pointer valmap field and with default values on pointers
-func TestFillStructRecursivePointerUnderPointerValmapAllDefault(t *testing.T) {
+func TestFillStructRecursiveNoConfigAllDefaultPointerUnderPointerValmap(t *testing.T) {
 	config := newConfiguration()
 
 	//init parsers
@@ -1145,7 +1145,7 @@ func TestFillStructRecursivePointerUnderPointerValmapAllDefault(t *testing.T) {
 }
 
 //Test fillStructRecursive on empty config with some random valmap field and with default values on pointers
-func TestFillStructRecursiveSomeValmapAllDefault(t *testing.T) {
+func TestFillStructRecursiveNoConfigAllDefaultSomeValmap(t *testing.T) {
 	config := &Configuration{}
 
 	//init parsers
@@ -1211,10 +1211,255 @@ func TestFillStructRecursiveSomeValmapAllDefault(t *testing.T) {
 	// fmt.Printf("Got : %+v\n", config)
 	check := &Configuration{}
 	check.Timeout = 5 * time.Second
-	check.Db = newDefaultPointerConfiguration().Db
-	check.Owner = newDefaultPointerConfiguration().Owner
+	check.Db = newDefaultPointersConfiguration().Db
+	check.Owner = newDefaultPointersConfiguration().Owner
 	check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 	check.Owner.Rate = 0.222
+	if !reflect.DeepEqual(config, check) {
+		if !reflect.DeepEqual(config.Owner, check.Owner) {
+			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+		}
+		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+	}
+}
+
+//Test LoadWithParsers on not empty config without default values on pointers and without flag called
+func TestLoadWithParsersInitConfigNoDefaultNoFlag(t *testing.T) {
+	//INIT
+	//init config
+	config := newConfiguration()
+	//init default pointers
+	defaultPointers := &Configuration{}
+	//init custom parsers
+	customParsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	//init args
+	args := []string{}
+
+	//TEST
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//CHECK
+	// fmt.Printf("Got : %+v\n", config)
+	check := newConfiguration()
+	if !reflect.DeepEqual(config, check) {
+		if !reflect.DeepEqual(config.Owner, check.Owner) {
+			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+		}
+		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+	}
+}
+
+//Test LoadWithParsers on not empty config with all default values on pointers and without flag called
+func TestLoadWithParsersInitConfigAllDefaultNoFlag(t *testing.T) {
+	//INIT
+	//init config
+	config := newConfiguration()
+	//init default pointers
+	defaultPointers := newDefaultPointersConfiguration()
+	//init custom parsers
+	customParsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	//init args
+	args := []string{}
+
+	//TEST
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//CHECK
+	// fmt.Printf("Got : %+v\n", config)
+	check := newConfiguration()
+	if !reflect.DeepEqual(config, check) {
+		if !reflect.DeepEqual(config.Owner, check.Owner) {
+			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+		}
+		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+	}
+}
+
+//Test LoadWithParsers on not empty config without default values on pointers and with all flags called
+func TestLoadWithParsersInitConfigNoDefaultAllFlag(t *testing.T) {
+	//INIT
+	//init config
+	config := newConfiguration()
+	//init default pointers
+	defaultPointers := &Configuration{}
+	//init custom parsers
+	customParsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	//init args
+	args := []string{
+		"--loglevel=INFO",
+		"--timeout=1s",
+		"--db",
+		"--db.watch",
+		"--db.ip=192.168.0.1",
+		"--db.load=-1",
+		"--db.load64=-164",
+		"--db.comax=2",
+		"--db.connectionmax64=264",
+		"--owner",
+		"--owner.name",
+		"--owner.dob=2016-04-20T17:39:00Z",
+		"--owner.rate=0.222",
+		"--owner.servers=1.0.0.1",
+	}
+
+	//TEST
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//CHECK
+	// fmt.Printf("Got : %+v\n", config)
+	checkDob, _ := time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+	check := &Configuration{
+		Name:     "initName",
+		LogLevel: "INFO",
+		Timeout:  time.Second,
+		Db: &DatabaseInfo{
+			ServerInfo: ServerInfo{
+				Watch:  true,
+				IP:     "192.168.0.1",
+				Load:   -1,
+				Load64: int64(-164),
+			},
+			ConnectionMax:   uint(2),
+			ConnectionMax64: uint64(264),
+		},
+		Owner: &OwnerInfo{
+			Name:        new(string),
+			DateOfBirth: checkDob,
+			Rate:        float64(0.222),
+			Servers:     []ServerInfo{ServerInfo{IP: "1.0.0.1"}},
+		},
+	}
+
+	if !reflect.DeepEqual(config, check) {
+		if !reflect.DeepEqual(config.Owner, check.Owner) {
+			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+		}
+		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+	}
+}
+
+//Test LoadWithParsers on not empty config with all default values on pointers and with some flags called
+func TestLoadWithParsersInitConfigAllDefaultSomeFlag(t *testing.T) {
+	//INIT
+	//init config
+	config := newConfiguration()
+	//init default pointers
+	defaultPointers := newDefaultPointersConfiguration()
+	//init custom parsers
+	customParsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	//init args
+	args := []string{
+		"--loglevel=INFO",
+		"--db",
+		"--owner.name",
+		"--owner.dob=2016-04-20T17:39:00Z",
+	}
+
+	//TEST
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//CHECK
+	// fmt.Printf("Got : %+v\n", config)
+
+	check := newConfiguration()
+	check.LogLevel = "INFO"
+	check.Db = newDefaultPointersConfiguration().Db
+	check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
+	check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+
+	if !reflect.DeepEqual(config, check) {
+		if !reflect.DeepEqual(config.Owner, check.Owner) {
+			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+		}
+		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+	}
+}
+
+//Test LoadWithParsers on empty config with all default values on pointers and with some flags called
+func TestLoadWithParsersNoConfigAllDefaultSomeFlag(t *testing.T) {
+	//INIT
+	//init config
+	config := &Configuration{}
+	//init default pointers
+	defaultPointers := newDefaultPointersConfiguration()
+	//init custom parsers
+	customParsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	//init args
+	args := []string{
+		"--loglevel=INFO",
+		"--db=FALSE",
+		"--owner.dob=2016-04-20T17:39:00Z",
+	}
+
+	//TEST
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//CHECK
+	// fmt.Printf("Got : %+v\n", config)
+
+	check := newDefaultPointersConfiguration()
+	check.LogLevel = "INFO"
+	check.Db = nil
+	check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+
+	if !reflect.DeepEqual(config, check) {
+		if !reflect.DeepEqual(config.Owner, check.Owner) {
+			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+		}
+		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+	}
+}
+
+//Test Load without parsers on not empty config with all default values on pointers and with some flags called
+func TestLoadInitConfigAllDefaultSomeFlag(t *testing.T) {
+	//INIT
+	//init config
+	config := newConfiguration()
+	//init default pointers
+	defaultPointers := newDefaultPointersConfiguration()
+
+	//init args
+	args := []string{
+		"--loglevel=INFO",
+		"--db",
+		"--owner.name",
+		"--owner.dob=2016-04-20T17:39:00Z",
+	}
+
+	//TEST
+	if err := Load(config, defaultPointers, args); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//CHECK
+	// fmt.Printf("Got : %+v\n", config)
+
+	check := newConfiguration()
+	check.LogLevel = "INFO"
+	check.Db = newDefaultPointersConfiguration().Db
+	check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
+	check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+
 	if !reflect.DeepEqual(config, check) {
 		if !reflect.DeepEqual(config.Owner, check.Owner) {
 			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
