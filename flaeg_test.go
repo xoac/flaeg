@@ -538,7 +538,7 @@ func TestParseArgsAll(t *testing.T) {
 		"--db.connectionmax64=264",
 		"--owner",
 		"--owner.name",
-		"--owner.dob=checkDob",
+		"--owner.dob=2016-04-20T17:39:00Z",
 		"--owner.rate=0.222",
 		"--owner.servers=1.0.0.1",
 	}
