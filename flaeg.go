@@ -460,7 +460,7 @@ type Command struct {
 	Name                  string
 	Description           string
 	Config                interface{}
-	DefaultPointersConfig interface{}
+	DefaultPointersConfig interface{} //TODO:case DefaultPointersConfig is nil
 	Run                   func(InitalizedConfig interface{}) error
 }
 
@@ -496,12 +496,14 @@ func (f *Flaeg) AddParser(typ reflect.Type, parser Parser) {
 // Run calls the command with flags given as agruments
 func (f *Flaeg) Run() error {
 	// split args
+	//TODO : put it in func and unit test it
 	commandName := ""
 	commandArgs := f.args
 	cptCommands := 0
 	for i, arg := range f.args {
 		if string(arg[0]) != "-" {
-			commandName = arg
+			//TODO case sensitivity
+			commandName = strings.ToLower(arg)
 			commandArgs = commandArgs[i+1:]
 			cptCommands++
 		}
