@@ -1503,11 +1503,12 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 		"--timeout=ItsAnError",
 	}
 	//init defaultValmap
-	checkStr := "DefaultOwnerNamePointer"
-	checkDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
+	checkDefaultStr := "DefaultOwnerNamePointer"
+	checkDefaultDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
+	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
 	defaultValmap := map[string]reflect.Value{
-		"loglevel":           reflect.ValueOf(""),
-		"timeout":            reflect.ValueOf(time.Duration(0)),
+		"loglevel":           reflect.ValueOf("DEBUG"),
+		"timeout":            reflect.ValueOf(time.Second),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
 		"db.watch":           reflect.ValueOf(true),
 		"db.ip":              reflect.ValueOf("192.168.1.2"),
@@ -1515,11 +1516,11 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 		"db.load64":          reflect.ValueOf(int64(64)),
 		"db.comax":           reflect.ValueOf(uint(3200000000)),
 		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(&OwnerInfo{Name: &checkStr, DateOfBirth: checkDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
-		"owner.name":         reflect.ValueOf(&checkStr),
+		"owner":              reflect.ValueOf(&OwnerInfo{Name: &checkDefaultStr, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
+		"owner.name":         reflect.ValueOf(&checkDefaultStr),
 		"owner.dob":          reflect.ValueOf(checkDob),
-		"owner.rate":         reflect.ValueOf(float64(0.111)),
-		"owner.servers":      reflect.ValueOf([]ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}),
+		"owner.rate":         reflect.ValueOf(float64(0.999)),
+		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
 	}
 	//Test
 	_, err := parseArgs(args, flagmap, parsers)
@@ -1564,11 +1565,12 @@ func TestPrintErrorUnknownFlag(t *testing.T) {
 		"--unknownFlag",
 	}
 	//init defaultValmap
-	checkStr := "DefaultOwnerNamePointer"
-	checkDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
+	checkDefaultStr := "DefaultOwnerNamePointer"
+	checkDefaultDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
+	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
 	defaultValmap := map[string]reflect.Value{
-		"loglevel":           reflect.ValueOf(""),
-		"timeout":            reflect.ValueOf(time.Duration(0)),
+		"loglevel":           reflect.ValueOf("DEBUG"),
+		"timeout":            reflect.ValueOf(time.Second),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
 		"db.watch":           reflect.ValueOf(true),
 		"db.ip":              reflect.ValueOf("192.168.1.2"),
@@ -1576,71 +1578,11 @@ func TestPrintErrorUnknownFlag(t *testing.T) {
 		"db.load64":          reflect.ValueOf(int64(64)),
 		"db.comax":           reflect.ValueOf(uint(3200000000)),
 		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(&OwnerInfo{Name: &checkStr, DateOfBirth: checkDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
-		"owner.name":         reflect.ValueOf(&checkStr),
+		"owner":              reflect.ValueOf(&OwnerInfo{Name: &checkDefaultStr, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
+		"owner.name":         reflect.ValueOf(&checkDefaultStr),
 		"owner.dob":          reflect.ValueOf(checkDob),
-		"owner.rate":         reflect.ValueOf(float64(0.111)),
-		"owner.servers":      reflect.ValueOf([]ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}),
-	}
-	//Test
-	_, err := parseArgs(args, flagmap, parsers)
-	if err != nil {
-		PrintError(err, flagmap, defaultValmap, parsers)
-	}
-}
-
-//Test Print Error with an unknown flag
-func TestPrintErrorUnknownFlag(t *testing.T) {
-	//We assume that getTypesRecursive works well
-	config := newConfiguration()
-	flagmap := make(map[string]StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-	//init parsers
-	parsers := map[reflect.Type]Parser{
-		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
-	}
-	var boolParser boolValue
-	parsers[reflect.TypeOf(true)] = &boolParser
-	var intParser intValue
-	parsers[reflect.TypeOf(1)] = &intParser
-	var int64Parser int64Value
-	parsers[reflect.TypeOf(int64(1))] = &int64Parser
-	var uintParser uintValue
-	parsers[reflect.TypeOf(uint(1))] = &uintParser
-	var uint64Parser uint64Value
-	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
-	var stringParser stringValue
-	parsers[reflect.TypeOf("")] = &stringParser
-	var float64Parser float64Value
-	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
-	var timeParser timeValue
-	parsers[reflect.TypeOf(time.Now())] = &timeParser
-	//init args
-	args := []string{
-		"--unknownFlag",
-	}
-	//init defaultValmap
-	checkStr := "DefaultOwnerNamePointer"
-	checkDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
-	defaultValmap := map[string]reflect.Value{
-		"loglevel":           reflect.ValueOf(""),
-		"timeout":            reflect.ValueOf(time.Duration(0)),
-		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
-		"db.watch":           reflect.ValueOf(true),
-		"db.ip":              reflect.ValueOf("192.168.1.2"),
-		"db.load":            reflect.ValueOf(32),
-		"db.load64":          reflect.ValueOf(int64(64)),
-		"db.comax":           reflect.ValueOf(uint(3200000000)),
-		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(&OwnerInfo{Name: &checkStr, DateOfBirth: checkDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
-		"owner.name":         reflect.ValueOf(&checkStr),
-		"owner.dob":          reflect.ValueOf(checkDob),
-		"owner.rate":         reflect.ValueOf(float64(0.111)),
-		"owner.servers":      reflect.ValueOf([]ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}),
+		"owner.rate":         reflect.ValueOf(float64(0.999)),
+		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
 	}
 	//Test
 	_, err := parseArgs(args, flagmap, parsers)
