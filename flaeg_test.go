@@ -3,9 +3,12 @@ package flaeg
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
+
+//TODO https://github.com/golang/go/wiki/TableDrivenTests
 
 //Configuration is a struct which contains all differents type to field
 //using parsers on string, time.Duration, pointer, bool, int, int64, time.Time, float64
@@ -1524,8 +1527,10 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 	}
 	//Test
 	_, err := parseArgs(args, flagmap, parsers)
-	if err != nil {
+	if err != nil && strings.Contains(err.Error(), "invalid argument") {
 		PrintError(err, flagmap, defaultValmap, parsers)
+	} else {
+		t.Errorf("Expected Error : invalid argument got Error : %s", err)
 	}
 }
 
@@ -1585,13 +1590,15 @@ func TestPrintErrorUnknownFlag(t *testing.T) {
 	}
 	//Test
 	_, err := parseArgs(args, flagmap, parsers)
-	if err != nil {
+	if err != nil && strings.Contains(err.Error(), "unknown flag") {
 		PrintError(err, flagmap, defaultValmap, parsers)
+	} else {
+		t.Errorf("Expected Error : invalid argument got Error : %s", err)
 	}
 }
 
 //Test Commands feature with only the root command
-func TestCommandsRoot(t *testing.T) {
+func TestFlaegCommandRootInitConfigAllDefaultSomeFlag(t *testing.T) {
 	//INIT
 	//init config
 	config := newConfiguration()
@@ -1625,7 +1632,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
 			if !reflect.DeepEqual(InitalizedConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", InitalizedConfig, config)
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
 			}
 			return nil
 		},
@@ -1641,4 +1648,243 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	if err := flaeg.Run(); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
+}
+
+//Version Config
+type VersionConfig struct {
+	Version string `short:"v" description:"Version"`
+}
+
+//Test Commands feature with root and version commands
+func TestCommandVersionInitConfigNoDefaultNoFlag(t *testing.T) {
+	//INIT
+	//init root config
+	rootConfig := newConfiguration()
+	//init root default pointers
+	rootDefaultPointers := newDefaultPointersConfiguration()
+	//init version config
+	versionConfig := &VersionConfig{"0.1"}
+
+	//init args
+	args := []string{
+		"--toto",  //no effect
+		"version", //call Command
+		// "-v0.2",
+	}
+
+	//init commands
+	//root command
+	rootCmd := &Command{
+		Name: "flaegtest",
+		Description: `flaegtest is a test program made to to test flaeg library.
+Complete documentation is available at https://github.com/containous/flaeg`,
+
+		Config:                rootConfig,
+		DefaultPointersConfig: rootDefaultPointers,
+		//test in run
+		Run: func(InitalizedConfig interface{}) error {
+			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+			//CHECK
+			check := newConfiguration()
+			check.LogLevel = "INFO"
+			check.Db = newDefaultPointersConfiguration().Db
+			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
+			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+
+			if !reflect.DeepEqual(InitalizedConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
+			}
+			return nil
+		},
+	}
+	//vesion command
+	VersionConfig := &Command{
+		Name:        "version",
+		Description: `Print version`,
+
+		Config:                versionConfig,
+		DefaultPointersConfig: versionConfig,
+		//test in run
+		Run: func(InitalizedConfig interface{}) error {
+			//cast
+			if config, ok := InitalizedConfig.(*VersionConfig); !ok {
+				return fmt.Errorf("Cannot convert the config into VersionConfig")
+			} else {
+				fmt.Printf("Version %s \n", config.Version)
+				//CHECK
+				if config.Version != "0.1" {
+					return fmt.Errorf("expected 0.1 got %s", config.Version)
+				}
+				return nil
+			}
+		},
+	}
+
+	//TEST
+	//init flaeg
+	flaeg := New(rootCmd, args)
+	//add custom parser to fleag
+	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	//add command Version
+	flaeg.AddCommand(VersionConfig)
+
+	//run test
+	if err := flaeg.Run(); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+}
+
+//Test Commands feature with root and version commands
+func TestCommandVersionInitConfigNoDefaultAllFlag(t *testing.T) {
+	//INIT
+	//init root config
+	rootConfig := newConfiguration()
+	//init root default pointers
+	rootDefaultPointers := newDefaultPointersConfiguration()
+	//init version config
+	versionConfig := &VersionConfig{"0.1"}
+
+	//init args
+	args := []string{
+		"--toto",  //no effect
+		"version", //call Command
+		"-v2.2beta",
+	}
+
+	//init commands
+	//root command
+	rootCmd := &Command{
+		Name: "flaegtest",
+		Description: `flaegtest is a test program made to to test flaeg library.
+Complete documentation is available at https://github.com/containous/flaeg`,
+
+		Config:                rootConfig,
+		DefaultPointersConfig: rootDefaultPointers,
+		//test in run
+		Run: func(InitalizedConfig interface{}) error {
+			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+			//CHECK
+			check := newConfiguration()
+			check.LogLevel = "INFO"
+			check.Db = newDefaultPointersConfiguration().Db
+			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
+			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+
+			if !reflect.DeepEqual(InitalizedConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
+			}
+			return nil
+		},
+	}
+	//vesion command
+	VersionConfig := &Command{
+		Name:        "version",
+		Description: `Print version`,
+
+		Config:                versionConfig,
+		DefaultPointersConfig: versionConfig,
+		//test in run
+		Run: func(InitalizedConfig interface{}) error {
+			//cast
+			if config, ok := InitalizedConfig.(*VersionConfig); !ok {
+				return fmt.Errorf("Cannot convert the config into VersionConfig")
+			} else {
+				fmt.Printf("Version %s \n", config.Version)
+				//CHECK
+				if config.Version != "2.2beta" {
+					return fmt.Errorf("expected 2.2beta got %s", config.Version)
+				}
+				return nil
+			}
+		},
+	}
+
+	//TEST
+	//init flaeg
+	flaeg := New(rootCmd, args)
+	//add custom parser to fleag
+	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	//add command Version
+	flaeg.AddCommand(VersionConfig)
+
+	//run test
+	if err := flaeg.Run(); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+}
+
+//Test Commands feature with root and version commands
+func TestCommandVersionInitConfigNoDefaultHelpFlag(t *testing.T) {
+	//INIT
+	//init root config
+	rootConfig := newConfiguration()
+	//init root default pointers
+	rootDefaultPointers := newDefaultPointersConfiguration()
+	//init version config
+	versionConfig := &VersionConfig{"0.1"}
+
+	//init args
+	args := []string{
+		"--toto",  //no effect
+		"version", //call Command
+		"-h",
+	}
+
+	//init commands
+	//root command
+	rootCmd := &Command{
+		Name: "flaegtest",
+		Description: `flaegtest is a test program made to to test flaeg library.
+Complete documentation is available at https://github.com/containous/flaeg`,
+
+		Config:                rootConfig,
+		DefaultPointersConfig: rootDefaultPointers,
+		//test in run
+		Run: func(InitalizedConfig interface{}) error {
+			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+			//CHECK
+			check := newConfiguration()
+			check.LogLevel = "INFO"
+			check.Db = newDefaultPointersConfiguration().Db
+			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
+			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+
+			if !reflect.DeepEqual(InitalizedConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
+			}
+			return nil
+		},
+	}
+	//vesion command
+	VersionConfig := &Command{
+		Name:        "version",
+		Description: `Print version`,
+
+		Config:                versionConfig,
+		DefaultPointersConfig: versionConfig,
+		//test in run
+		Run: func(InitalizedConfig interface{}) error {
+			//cast
+			if config, ok := InitalizedConfig.(*VersionConfig); !ok {
+				return fmt.Errorf("Cannot convert the config into VersionConfig")
+			} else {
+				fmt.Printf("Version %s \n", config.Version)
+				return nil
+			}
+		},
+	}
+
+	//TEST
+	//init flaeg
+	flaeg := New(rootCmd, args)
+	//add custom parser to fleag
+	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	//add command Version
+	flaeg.AddCommand(VersionConfig)
+
+	//run test
+	if err := flaeg.Run(); err == nil || !strings.Contains(err.Error(), "help requested") {
+		t.Errorf("Expected Error :help requested got Error : %s", err)
+	}
+
 }
