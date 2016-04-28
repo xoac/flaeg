@@ -1471,6 +1471,86 @@ func TestLoadInitConfigAllDefaultSomeFlag(t *testing.T) {
 	}
 }
 
+//Test Parse Args Error with an invalid argument
+func TestParseArgsInvalidArgument(t *testing.T) {
+	//We assume that getTypesRecursive works well
+	config := newConfiguration()
+	flagmap := make(map[string]StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	//init parsers
+	parsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	var boolParser boolValue
+	parsers[reflect.TypeOf(true)] = &boolParser
+	var intParser intValue
+	parsers[reflect.TypeOf(1)] = &intParser
+	var int64Parser int64Value
+	parsers[reflect.TypeOf(int64(1))] = &int64Parser
+	var uintParser uintValue
+	parsers[reflect.TypeOf(uint(1))] = &uintParser
+	var uint64Parser uint64Value
+	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
+	var stringParser stringValue
+	parsers[reflect.TypeOf("")] = &stringParser
+	var float64Parser float64Value
+	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
+	var durationParser durationValue
+	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var timeParser timeValue
+	parsers[reflect.TypeOf(time.Now())] = &timeParser
+	//init args
+	args := []string{
+		"--timeout=ItsAnError",
+	}
+	//Test
+	if _, err := parseArgs(args, flagmap, parsers); err == nil || !strings.Contains(err.Error(), "invalid argument") {
+		t.Errorf("Expected Error : invalid argument got Error : %s", err)
+	}
+}
+
+//Test Parse Args Error with an unknown flag
+func TestParseArgsErrorUnknownFlag(t *testing.T) {
+	//We assume that getTypesRecursive works well
+	config := newConfiguration()
+	flagmap := make(map[string]StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	//init parsers
+	parsers := map[reflect.Type]Parser{
+		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
+	}
+	var boolParser boolValue
+	parsers[reflect.TypeOf(true)] = &boolParser
+	var intParser intValue
+	parsers[reflect.TypeOf(1)] = &intParser
+	var int64Parser int64Value
+	parsers[reflect.TypeOf(int64(1))] = &int64Parser
+	var uintParser uintValue
+	parsers[reflect.TypeOf(uint(1))] = &uintParser
+	var uint64Parser uint64Value
+	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
+	var stringParser stringValue
+	parsers[reflect.TypeOf("")] = &stringParser
+	var float64Parser float64Value
+	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
+	var durationParser durationValue
+	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var timeParser timeValue
+	parsers[reflect.TypeOf(time.Now())] = &timeParser
+	//init args
+	args := []string{
+		"--unknownFlag",
+	}
+	//Test
+	if _, err := parseArgs(args, flagmap, parsers); err == nil || !strings.Contains(err.Error(), "unknown flag") {
+		t.Errorf("Expected Error : unknown flag got Error : %s", err)
+	}
+}
+
 //Test Print Error with an invalid argument
 func TestPrintErrorInvalidArgument(t *testing.T) {
 	//We assume that getTypesRecursive works well
@@ -1528,69 +1608,6 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 	//Test
 	_, err := parseArgs(args, flagmap, parsers)
 	if err != nil && strings.Contains(err.Error(), "invalid argument") {
-		PrintError(err, flagmap, defaultValmap, parsers)
-	} else {
-		t.Errorf("Expected Error : invalid argument got Error : %s", err)
-	}
-}
-
-//Test Print Error with an unknown flag
-func TestPrintErrorUnknownFlag(t *testing.T) {
-	//We assume that getTypesRecursive works well
-	config := newConfiguration()
-	flagmap := make(map[string]StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
-	//init parsers
-	parsers := map[reflect.Type]Parser{
-		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
-	}
-	var boolParser boolValue
-	parsers[reflect.TypeOf(true)] = &boolParser
-	var intParser intValue
-	parsers[reflect.TypeOf(1)] = &intParser
-	var int64Parser int64Value
-	parsers[reflect.TypeOf(int64(1))] = &int64Parser
-	var uintParser uintValue
-	parsers[reflect.TypeOf(uint(1))] = &uintParser
-	var uint64Parser uint64Value
-	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
-	var stringParser stringValue
-	parsers[reflect.TypeOf("")] = &stringParser
-	var float64Parser float64Value
-	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
-	var timeParser timeValue
-	parsers[reflect.TypeOf(time.Now())] = &timeParser
-	//init args
-	args := []string{
-		"--unknownFlag",
-	}
-	//init defaultValmap
-	checkDefaultStr := "DefaultOwnerNamePointer"
-	checkDefaultDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
-	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
-	defaultValmap := map[string]reflect.Value{
-		"loglevel":           reflect.ValueOf("DEBUG"),
-		"timeout":            reflect.ValueOf(time.Second),
-		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
-		"db.watch":           reflect.ValueOf(true),
-		"db.ip":              reflect.ValueOf("192.168.1.2"),
-		"db.load":            reflect.ValueOf(32),
-		"db.load64":          reflect.ValueOf(int64(64)),
-		"db.comax":           reflect.ValueOf(uint(3200000000)),
-		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(&OwnerInfo{Name: &checkDefaultStr, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
-		"owner.name":         reflect.ValueOf(&checkDefaultStr),
-		"owner.dob":          reflect.ValueOf(checkDob),
-		"owner.rate":         reflect.ValueOf(float64(0.999)),
-		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
-	}
-	//Test
-	_, err := parseArgs(args, flagmap, parsers)
-	if err != nil && strings.Contains(err.Error(), "unknown flag") {
 		PrintError(err, flagmap, defaultValmap, parsers)
 	} else {
 		t.Errorf("Expected Error : invalid argument got Error : %s", err)
@@ -1886,5 +1903,156 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	if err := flaeg.Run(); err == nil || !strings.Contains(err.Error(), "help requested") {
 		t.Errorf("Expected Error :help requested got Error : %s", err)
 	}
+}
 
+//Test Commands feature with root and version commands
+func TestCommandVersionManyCommandsCalled(t *testing.T) {
+	//INIT
+	//init root config
+	rootConfig := newConfiguration()
+	//init root default pointers
+	rootDefaultPointers := newDefaultPointersConfiguration()
+	//init version config
+	versionConfig := &VersionConfig{"0.1"}
+
+	//init args
+	args := []string{
+		"--toto",   //no effect
+		"command1", //call Command
+		"--flag1",
+		"command2", //call Command
+		"--flag2",
+	}
+
+	//init commands
+	//root command
+	rootCmd := &Command{
+		Name: "flaegtest",
+		Description: `flaegtest is a test program made to to test flaeg library.
+Complete documentation is available at https://github.com/containous/flaeg`,
+
+		Config:                rootConfig,
+		DefaultPointersConfig: rootDefaultPointers,
+		//test in run
+		Run: func(InitalizedConfig interface{}) error {
+			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+			//CHECK
+			check := newConfiguration()
+			check.LogLevel = "INFO"
+			check.Db = newDefaultPointersConfiguration().Db
+			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
+			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+
+			if !reflect.DeepEqual(InitalizedConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
+			}
+			return nil
+		},
+	}
+	//vesion command
+	VersionConfig := &Command{
+		Name:        "version",
+		Description: `Print version`,
+
+		Config:                versionConfig,
+		DefaultPointersConfig: versionConfig,
+		//test in run
+		Run: func(InitalizedConfig interface{}) error {
+			//cast
+			if config, ok := InitalizedConfig.(*VersionConfig); !ok {
+				return fmt.Errorf("Cannot convert the config into VersionConfig")
+			} else {
+				fmt.Printf("Version %s \n", config.Version)
+				return nil
+			}
+		},
+	}
+
+	//TEST
+	//init flaeg
+	flaeg := New(rootCmd, args)
+	//add custom parser to fleag
+	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	//add command Version
+	flaeg.AddCommand(VersionConfig)
+
+	//run test
+	if err := flaeg.Run(); err == nil || !strings.Contains(err.Error(), "many commands called") {
+		t.Errorf("Expected Error :Too many commands called got Error : %s", err)
+	}
+}
+
+//Test Commands feature with root and version commands
+func TestCommandVersionUnknownCommand(t *testing.T) {
+	//INIT
+	//init root config
+	rootConfig := newConfiguration()
+	//init root default pointers
+	rootDefaultPointers := newDefaultPointersConfiguration()
+	//init version config
+	versionConfig := &VersionConfig{"0.1"}
+
+	//init args
+	args := []string{
+		"--toto",         //no effect
+		"unknowncommand", //call Command
+		"-h",
+	}
+
+	//init commands
+	//root command
+	rootCmd := &Command{
+		Name: "flaegtest",
+		Description: `flaegtest is a test program made to to test flaeg library.
+Complete documentation is available at https://github.com/containous/flaeg`,
+
+		Config:                rootConfig,
+		DefaultPointersConfig: rootDefaultPointers,
+		//test in run
+		Run: func(InitalizedConfig interface{}) error {
+			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+			//CHECK
+			check := newConfiguration()
+			check.LogLevel = "INFO"
+			check.Db = newDefaultPointersConfiguration().Db
+			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
+			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+
+			if !reflect.DeepEqual(InitalizedConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
+			}
+			return nil
+		},
+	}
+	//vesion command
+	VersionConfig := &Command{
+		Name:        "version",
+		Description: `Print version`,
+
+		Config:                versionConfig,
+		DefaultPointersConfig: versionConfig,
+		//test in run
+		Run: func(InitalizedConfig interface{}) error {
+			//cast
+			if config, ok := InitalizedConfig.(*VersionConfig); !ok {
+				return fmt.Errorf("Cannot convert the config into VersionConfig")
+			} else {
+				fmt.Printf("Version %s \n", config.Version)
+				return nil
+			}
+		},
+	}
+
+	//TEST
+	//init flaeg
+	flaeg := New(rootCmd, args)
+	//add custom parser to fleag
+	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	//add command Version
+	flaeg.AddCommand(VersionConfig)
+
+	//run test
+	if err := flaeg.Run(); err == nil || (!strings.Contains(err.Error(), "not found") && !strings.Contains(err.Error(), "Command")) {
+		t.Errorf("Expected Error :Command not found got Error : %s", err)
+	}
 }

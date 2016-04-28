@@ -504,7 +504,7 @@ func (f *Flaeg) Run() error {
 		if string(arg[0]) != "-" {
 			//TODO case sensitivity
 			commandName = strings.ToLower(arg)
-			commandArgs = commandArgs[i+1:]
+			commandArgs = f.args[i+1:]
 			cptCommands++
 		}
 	}
