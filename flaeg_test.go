@@ -1526,7 +1526,6 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 	_, err := parseArgs(args, flagmap, parsers)
 	if err != nil {
 		PrintError(err, flagmap, defaultValmap, parsers)
-		//FIX ME : default values are wrong
 	}
 }
 
@@ -1588,5 +1587,58 @@ func TestPrintErrorUnknownFlag(t *testing.T) {
 	_, err := parseArgs(args, flagmap, parsers)
 	if err != nil {
 		PrintError(err, flagmap, defaultValmap, parsers)
+	}
+}
+
+//Test Commands feature with only the root command
+func TestCommandsRoot(t *testing.T) {
+	//INIT
+	//init config
+	config := newConfiguration()
+	//init default pointers
+	defaultPointers := newDefaultPointersConfiguration()
+
+	//init args
+	args := []string{
+		"--loglevel=INFO",
+		"--db",
+		"--owner.name",
+		"--owner.dob=2016-04-20T17:39:00Z",
+	}
+
+	//init command
+	rootCmd := &Command{
+		Name: "flaegtest",
+		Description: `flaegtest is a test program made to to test flaeg library.
+Complete documentation is available at https://github.com/containous/flaeg`,
+
+		Config:                config,
+		DefaultPointersConfig: defaultPointers,
+		//test in run
+		Run: func(InitalizedConfig interface{}) error {
+			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+			//CHECK
+			check := newConfiguration()
+			check.LogLevel = "INFO"
+			check.Db = newDefaultPointersConfiguration().Db
+			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
+			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+
+			if !reflect.DeepEqual(InitalizedConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", InitalizedConfig, config)
+			}
+			return nil
+		},
+	}
+
+	//TEST
+	//init flaeg
+	flaeg := New(rootCmd, args)
+	//add custom parser to fleag
+	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+
+	//run test
+	if err := flaeg.Run(); err != nil {
+		t.Errorf("Error %s", err.Error())
 	}
 }
