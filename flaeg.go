@@ -452,15 +452,16 @@ func Load(config interface{}, defaultValue interface{}, args []string) error {
 }
 
 //Command struct contains program/command information (command name and description)
-//Config must be a pointer on the configutation struct to parse (it could be not empty)
-//DefaultConfig must be a pointer on the configutation default value and default pointers value
+//Config must be a pointer on the configuration struct to parse (it containts default values of field)
+//DefaultPointersConfig contains default pointers values: those values are set on pointers fields if their flags are called
+//It must be the same type(struct) as Config
 //Run is the func which launch the program using initialized configuration struct
 type Command struct {
-	Name          string
-	Description   string
-	Config        interface{}
-	DefaultConfig interface{}
-	Run           func(InitalizedConfig interface{}) error
+	Name                  string
+	Description           string
+	Config                interface{}
+	DefaultPointersConfig interface{}
+	Run                   func(InitalizedConfig interface{}) error
 }
 
 //Flaeg struct contains commands (at least the root one)
@@ -510,7 +511,7 @@ func (f *Flaeg) Run() error {
 	// run sous commande si présente, ou root commande sinon
 	case 0:
 		//initialize Config
-		if err := LoadWithParsers(f.rootCommand.Config, f.rootCommand.DefaultConfig, commandArgs, f.customParsers); err != nil {
+		if err := LoadWithParsers(f.rootCommand.Config, f.rootCommand.DefaultPointersConfig, commandArgs, f.customParsers); err != nil {
 			return err
 		}
 		return f.rootCommand.Run(f.rootCommand.Config) //Ref ?
@@ -519,7 +520,7 @@ func (f *Flaeg) Run() error {
 		for _, command := range f.commands {
 			if commandName == command.Name {
 				//initialize Config
-				if err := LoadWithParsers(command.Config, command.DefaultConfig, commandArgs, f.customParsers); err != nil {
+				if err := LoadWithParsers(command.Config, command.DefaultPointersConfig, commandArgs, f.customParsers); err != nil {
 					return err
 				}
 				return command.Run(command.Config)
