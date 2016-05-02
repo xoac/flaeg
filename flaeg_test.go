@@ -1241,7 +1241,7 @@ func TestLoadWithParsersInitConfigNoDefaultNoFlag(t *testing.T) {
 	args := []string{}
 
 	//TEST
-	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers, nil); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1271,7 +1271,7 @@ func TestLoadWithParsersInitConfigAllDefaultNoFlag(t *testing.T) {
 	args := []string{}
 
 	//TEST
-	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers, nil); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1316,7 +1316,7 @@ func TestLoadWithParsersInitConfigNoDefaultAllFlag(t *testing.T) {
 	}
 
 	//TEST
-	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers, nil); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1373,7 +1373,7 @@ func TestLoadWithParsersInitConfigAllDefaultSomeFlag(t *testing.T) {
 	}
 
 	//TEST
-	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers, nil); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1413,7 +1413,7 @@ func TestLoadWithParsersNoConfigAllDefaultSomeFlag(t *testing.T) {
 	}
 
 	//TEST
-	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers, nil); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1450,7 +1450,7 @@ func TestLoadInitConfigAllDefaultSomeFlag(t *testing.T) {
 	}
 
 	//TEST
-	if err := Load(config, defaultPointers, args); err != nil {
+	if err := Load(config, defaultPointers, args, nil); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1608,7 +1608,7 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 	//Test
 	_, err := parseArgs(args, flagmap, parsers)
 	if err != nil && strings.Contains(err.Error(), "invalid argument") {
-		PrintError(err, flagmap, defaultValmap, parsers)
+		PrintError(err, flagmap, defaultValmap, parsers, nil)
 	} else {
 		t.Errorf("Expected Error : invalid argument got Error : %s", err)
 	}
@@ -1724,7 +1724,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		//test in run
 		Run: func(InitalizedConfig interface{}) error {
 			//cast
-			if config, ok := InitalizedConfig.(*VersionConfig); !ok {
+			config, ok := InitalizedConfig.(*VersionConfig)
+			if !ok {
 				return fmt.Errorf("Cannot convert the config into VersionConfig")
 			} else {
 				fmt.Printf("Version %s \n", config.Version)
