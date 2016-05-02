@@ -7,9 +7,10 @@ sudo: false
 
 install:
     - go get -d -v ./...
+    - go get github.com/mattn/goveralls
 
 script:
     - GOOS=darwin go build
     - GOOS=windows go build
     - GOOS=linux go build
-    - go test -v -race `go list ./... | grep -v /vendor/`
+    - $HOME/gopath/bin/goveralls -service=travis-ci

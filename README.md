@@ -25,9 +25,9 @@ FFFFFFFF            llllll   ææææææææææ     æææææææææ      gg
                                                              ggggg   
 ```
 
-[![Travis branch](https://img.shields.io/travis/containous/flaeg/master.svg?maxAge=2592000)]()
-[![Coverage](http://gocover.io/_badge/github.com/containous/flaeg)](http://gocover.io/github.com/containous/flaeg)
-[![license](https://img.shields.io/github/license/containous/flaeg.svg?maxAge=2592000)]()
+[![Travis branch](https://img.shields.io/travis/containous/flaeg/master.svg)](https://travis-ci.org/containous/flaeg)
+[![Coverage Status](https://coveralls.io/repos/github/containous/flaeg/badge.svg?branch=master)](https://coveralls.io/github/containous/flaeg?branch=master)
+[![license](https://img.shields.io/github/license/containous/flaeg.svg)](https://github.com/containous/flaeg/blob/master/LICENSE.md)
 
 Flaeg is a Go library for building dynamically a powerful modern Command Line Interface and loading a program configuration structure from arguments.
 Go developers don't need to worry about keeping flags and commands updated anymore : it works by itself !
