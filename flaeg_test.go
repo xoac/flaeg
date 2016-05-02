@@ -1241,7 +1241,7 @@ func TestLoadWithParsersInitConfigNoDefaultNoFlag(t *testing.T) {
 	args := []string{}
 
 	//TEST
-	if err := LoadWithParsers(config, defaultPointers, args, customParsers, nil); err != nil {
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1271,7 +1271,7 @@ func TestLoadWithParsersInitConfigAllDefaultNoFlag(t *testing.T) {
 	args := []string{}
 
 	//TEST
-	if err := LoadWithParsers(config, defaultPointers, args, customParsers, nil); err != nil {
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1316,7 +1316,7 @@ func TestLoadWithParsersInitConfigNoDefaultAllFlag(t *testing.T) {
 	}
 
 	//TEST
-	if err := LoadWithParsers(config, defaultPointers, args, customParsers, nil); err != nil {
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1373,7 +1373,7 @@ func TestLoadWithParsersInitConfigAllDefaultSomeFlag(t *testing.T) {
 	}
 
 	//TEST
-	if err := LoadWithParsers(config, defaultPointers, args, customParsers, nil); err != nil {
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1413,7 +1413,7 @@ func TestLoadWithParsersNoConfigAllDefaultSomeFlag(t *testing.T) {
 	}
 
 	//TEST
-	if err := LoadWithParsers(config, defaultPointers, args, customParsers, nil); err != nil {
+	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1450,7 +1450,7 @@ func TestLoadInitConfigAllDefaultSomeFlag(t *testing.T) {
 	}
 
 	//TEST
-	if err := Load(config, defaultPointers, args, nil); err != nil {
+	if err := Load(config, defaultPointers, args); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1608,7 +1608,7 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 	//Test
 	_, err := parseArgs(args, flagmap, parsers)
 	if err != nil && strings.Contains(err.Error(), "invalid argument") {
-		PrintError(err, flagmap, defaultValmap, parsers, nil)
+		PrintError(err, flagmap, defaultValmap, parsers)
 	} else {
 		t.Errorf("Expected Error : invalid argument got Error : %s", err)
 	}
@@ -1727,14 +1727,14 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			config, ok := InitalizedConfig.(*VersionConfig)
 			if !ok {
 				return fmt.Errorf("Cannot convert the config into VersionConfig")
-			} else {
-				fmt.Printf("Version %s \n", config.Version)
-				//CHECK
-				if config.Version != "0.1" {
-					return fmt.Errorf("expected 0.1 got %s", config.Version)
-				}
-				return nil
 			}
+			fmt.Printf("Version %s \n", config.Version)
+			//CHECK
+			if config.Version != "0.1" {
+				return fmt.Errorf("expected 0.1 got %s", config.Version)
+			}
+			return nil
+
 		},
 	}
 
@@ -1832,7 +1832,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 }
 
 //Test Commands feature with root and version commands
-func TestCommandVersionInitConfigNoDefaultHelpFlag(t *testing.T) {
+func TestCommandVersionInitConfigNoDefaultCommandHelpFlag(t *testing.T) {
 	//INIT
 	//init root config
 	rootConfig := newConfiguration()
@@ -1883,12 +1883,85 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		//test in run
 		Run: func(InitalizedConfig interface{}) error {
 			//cast
-			if config, ok := InitalizedConfig.(*VersionConfig); !ok {
+			config, ok := InitalizedConfig.(*VersionConfig)
+			if !ok {
 				return fmt.Errorf("Cannot convert the config into VersionConfig")
-			} else {
-				fmt.Printf("Version %s \n", config.Version)
-				return nil
 			}
+			fmt.Printf("Version %s \n", config.Version)
+			return nil
+		},
+	}
+
+	//TEST
+	//init flaeg
+	flaeg := New(rootCmd, args)
+	//add custom parser to fleag
+	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	//add command Version
+	flaeg.AddCommand(VersionConfig)
+
+	//run test
+	if err := flaeg.Run(); err == nil || !strings.Contains(err.Error(), "help requested") {
+		t.Errorf("Expected Error :help requested got Error : %s", err)
+	}
+}
+
+//Test Commands feature with root and version commands
+func TestCommandVersionInitConfigNoDefaultRootCommandHelpFlag(t *testing.T) {
+	//INIT
+	//init root config
+	rootConfig := newConfiguration()
+	//init root default pointers
+	rootDefaultPointers := newDefaultPointersConfiguration()
+	//init version config
+	versionConfig := &VersionConfig{"0.1"}
+
+	//init args
+	args := []string{
+		"--help",
+	}
+
+	//init commands
+	//root command
+	rootCmd := &Command{
+		Name: "flaegtest",
+		Description: `flaegtest is a test program made to to test flaeg library.
+Complete documentation is available at https://github.com/containous/flaeg`,
+
+		Config:                rootConfig,
+		DefaultPointersConfig: rootDefaultPointers,
+		//test in run
+		Run: func(InitalizedConfig interface{}) error {
+			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+			//CHECK
+			check := newConfiguration()
+			check.LogLevel = "INFO"
+			check.Db = newDefaultPointersConfiguration().Db
+			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
+			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+
+			if !reflect.DeepEqual(InitalizedConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
+			}
+			return nil
+		},
+	}
+	//vesion command
+	VersionConfig := &Command{
+		Name:        "version",
+		Description: `Print version`,
+
+		Config:                versionConfig,
+		DefaultPointersConfig: versionConfig,
+		//test in run
+		Run: func(InitalizedConfig interface{}) error {
+			//cast
+			config, ok := InitalizedConfig.(*VersionConfig)
+			if !ok {
+				return fmt.Errorf("Cannot convert the config into VersionConfig")
+			}
+			fmt.Printf("Version %s \n", config.Version)
+			return nil
 		},
 	}
 
