@@ -1,0 +1,15 @@
+language: go
+
+go:
+    - 1.6.2
+
+sudo: false
+
+install:
+    - go get -d -v ./...
+
+script:
+    - GOOS=darwin go build
+    - GOOS=windows go build
+    - GOOS=linux go build
+    - go test -v -race `go list ./... | grep -v /vendor/`
