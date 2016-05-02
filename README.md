@@ -24,14 +24,19 @@ FFFFFFFF            llllll   ææææææææææ     æææææææææ      gg
                                                            gg:::::gg   
                                                              ggggg   
 ```
+
+[![Travis branch](https://img.shields.io/travis/containous/flaeg/master.svg?maxAge=2592000)]()
 [![Coverage](http://gocover.io/_badge/github.com/containous/flaeg)](http://gocover.io/github.com/containous/flaeg)
+[![license](https://img.shields.io/github/license/containous/flaeg.svg?maxAge=2592000)]()
 
 Flaeg is a Go library for building dynamically a powerful modern Command Line Interface and loading a program configuration structure from arguments.
 Go developers don't need to worry about keeping flags and commands updated anymore : it works by itself !
+
 ## Overview
-Do you know how boring it is to keep your CLI up-to-date ?  You will be glad to use Flaeg ;-)
+You know how boring it is to keep your CLI up-to-date. You will be glad to use Flaeg ;-)
 This package uses your own configuration structure to build your CLI. 
 You only need to describe every `StructField` with a `StructTag`,  flaeg will automatically build the CLI, parse data from args, and load Go values into Configuration structure via reflection !
+
 ## Features
  - Load your Configuration structure with program args
  - Keep your Configuration structure values unchanged if no flags called (support defaults values)
@@ -41,7 +46,7 @@ You only need to describe every `StructField` with a `StructTag`,  flaeg will au
 	- type string
 	- type float (float64)
 	- type time.Duration
-    - type time.Time
+    	- type time.Time
  - Many `Kind` of `StructField` in the Configuration structure are supported :
 	 - Sub-Structure
 	 - Anonymous field (on Sub-Structure)
@@ -58,9 +63,6 @@ You only need to describe every `StructField` with a `StructTag`,  flaeg will au
  - You only need to provide the root-Command which contains the function to run  
  - You can add Sub-Commands to the root-Command
  
-## Trivial example
- TODO soon
- 
 ## Getting Started
 
 ### Installation
@@ -68,9 +70,11 @@ To install `Flaeg`, simply run:
 ```
 $ go get github.com/containous/flaeg
 ```
-### Configurations Structures
+
+### Configuration Structures
 Flaeg works on any kind of structure, you only need to add a `StructTag` "description" on the fields to flag.
 Like this :
+
 ```go
 //Configuration is a struct which contains all differents type to field
 //using parsers on string, time.Duration, pointer, bool, int, int64, time.Time, float64
@@ -82,7 +86,9 @@ type Configuration struct {
 	Owner    *OwnerInfo    `description:"Enable Owner description"` //another pointer type field (on OwnerInfo)
 }
 ```
-You can add Sub-Structurs :
+
+You can add sub-structures :
+
 ```go
 type DatabaseInfo struct {
 	ServerInfo             //Go throught annonymous field
@@ -96,7 +102,9 @@ type OwnerInfo struct {
 	Servers     []ServerInfo `description:"Owner Server"`                   //slice of ServerInfo type field, need a custom parser
 }
 ```
-And Anonymous Sub-Structurs :
+
+And anonymous sub-structures :
+
 ```go
 type ServerInfo struct {
 	Watch  bool   `description:"Watch device"`      //bool type
@@ -105,22 +113,24 @@ type ServerInfo struct {
 	Load64 int64  `description:"Server load"`       //int64 type field, same description just to be sure it works
 }
 ```
+
 ### Flags
-Flaeg is POSIX compliant using [pflag](https://github.com/ogier/pflag) package
-Flaeg concats the names of fields to generate the flags. They are not case sensitiv. 
-For example, the field `ConnectionMax64` in `OwnerInfo` sub-Structure which is in `Configuration` Structure will be "--db.connexionmax64"
-But you can overwrite it with the `StructTag` "long" as like as the field `ConnectionMax` which is flaged "--db.comax"
-Finally, you can add a "Shorthand" flags (1 character) using the `StructTag` "short", like in the field `LogLevel` with the "Shorthand" flags "-l" in addition to the flag "--loglevel"
+Flaeg is POSIX compliant using [pflag](https://github.com/ogier/pflag) package.
+Flaeg concats the names of fields to generate the flags. They are not case sensitive. 
+For example, the field `ConnectionMax64` in `OwnerInfo` sub-Structure which is in `Configuration` Structure will be `--db.connexionmax64`.
+But you can overwrite it with the `StructTag` `long` as like as the field `ConnectionMax` which is flagged `--db.comax`
+Finally, you can add a short flag (1 character) using the `StructTag` `short`, like in the field `LogLevel` with the short flags `-l` in addition to the flag`--loglevel`
 
 ### Default values
-Default values on fields come form the Configuration Structure. If it was not initialized, Golang default values are used.
-For pointers, the DefaultPointers Structure provides default values.
+Default values on fields come from the configuration structure. If it was not initialized, Golang default values are used.
+For pointers, the `DefaultPointers` structure provides default values.
 
 ### Help
-The help auto-generated using the "description" `StructTag` and default value from Configuration Structure.
-Flag "--help" and "Shorthand" flag "-h" are bound to call the helper.
-If the args parser fail, it will print the error and the helper will be call as well.
+The help is auto-generated using the `description` `StructTag` and default value from configuration structure.
+Flag `--help` and short flag `-h` are bound to call the helper.
+If the args parser fails, it will print the error and the helper will be call as well.
 Here an example :
+
 ```
 Usage: flaeg.test [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
    or: flaeg.test [--flag[=true|false| ]] [-f[true|false| ]] ...     set true/false to boolean flag(s)   
@@ -142,12 +152,14 @@ Flags:
 	--timeout                                          Timeout duration (default "1s")
 	-h, -help                                          Print Help (this message) and exit
 ```
+
 ### Command
 The `Command` structure contains program/command information (command name and description)
-Config must be a pointer on the configuration struct to parse (it contains default values of field)
-DefaultPointersConfig contains default pointers values: those values are set on pointers fields if their flags are called
-It must be the same type(struct) as Config
-Run is the func which launch the program using initialized configuration structure
+`Config` must be a pointer on the configuration struct to parse (it contains default values of field)
+`DefaultPointersConfig` contains default pointers values: those values are set on pointers fields if their flags are called.
+It must be the same type(struct) as `Config`
+`Run` is the func which launch the program using initialized configuration structure
+
 ```go
 type Command struct {
 	Name                  string
@@ -157,6 +169,7 @@ type Command struct {
 	Run                   func(InitalizedConfig interface{}) error
 }
 ```
+
 So, you can creat Commands like this :
 ```go
 	rootCmd := &Command{
@@ -174,11 +187,14 @@ So, you can creat Commands like this :
 			return nil
 		},
 ```
-NB : You have to creat at least the root-Command, but you can add some sub-Command.
+
+NB : You have to create at least the root-Command, but you can add some sub-Command.
+
 ### Run Flaeg
 Let's run fleag now :
-rootCmd is the root-Command
-versionCmd is a sub-Command
+`rootCmd` is the root-Command
+`versionCmd` is a sub-Command
+
 ```go
 	//init flaeg
 	flaeg := flaeg.New(rootCmd, os.Args[1:])
@@ -191,24 +207,32 @@ versionCmd is a sub-Command
 	}
 }
 ```
+
 ### Custom Parsers
-The function flaeg.AddParser adds custom parser for a specified type
+The function `flaeg.AddParser` adds a custom parser for a specified type
+
 ```go
 func (f *Flaeg) AddParser(typ reflect.Type, parser Parser)
 ```
+
 It can be used like this :
+
 ```go
 //add custom parser to fleag
 flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
 ```
-sliceServerValue{} need to implement flaeg.Parser :
+
+`sliceServerValue{}` need to implement `flaeg.Parser` :
+
 ```go
 type Parser interface {
 	flag.Getter
 	SetValue(interface{})
 }
 ```
+
 like this :
+
 ```go
 type sliceServerValue []ServerInfo
 
@@ -227,11 +251,10 @@ func (c *sliceServerValue) SetValue(val interface{}) {
 	*c = sliceServerValue(val.([]ServerInfo))
 }
 ```
+
 ## Contributing
 1. Fork it!
 2. Create your feature branch: `git checkout -b my-new-feature`
 3. Commit your changes: `git commit -am 'Add some feature'`
 4. Push to the branch: `git push origin my-new-feature`
 5. Submit a pull request :D
-## License
-TODO: Write license
