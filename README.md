@@ -87,11 +87,17 @@ type Configuration struct {
 }
 ```
 
-You can add sub-structures :
+You can add sub-structures even if they are anonymous :
 
 ```go
+type ServerInfo struct {
+	Watch  bool   `description:"Watch device"`      //bool type
+	IP     string `description:"Server ip address"` //string type field
+	Load   int    `description:"Server load"`       //int type field
+	Load64 int64  `description:"Server load"`       //int64 type field, same description just to be sure it works
+}
 type DatabaseInfo struct {
-	ServerInfo             //Go throught annonymous field
+	ServerInfo             //anonymous sub-structures
 	ConnectionMax   uint   `long:"comax" description:"Number max of connections on database"` //uint type field, long flag "--comax"
 	ConnectionMax64 uint64 `description:"Number max of connections on database"`              //uint64 type field, same description just to be sure it works
 }
@@ -100,17 +106,6 @@ type OwnerInfo struct {
 	DateOfBirth time.Time    `long:"dob" description:"Owner date of birth"` //time.Time type field, long flag "--dob"
 	Rate        float64      `description:"Owner rate"`                     //float64 type field
 	Servers     []ServerInfo `description:"Owner Server"`                   //slice of ServerInfo type field, need a custom parser
-}
-```
-
-And anonymous sub-structures :
-
-```go
-type ServerInfo struct {
-	Watch  bool   `description:"Watch device"`      //bool type
-	IP     string `description:"Server ip address"` //string type field
-	Load   int    `description:"Server load"`       //int type field
-	Load64 int64  `description:"Server load"`       //int64 type field, same description just to be sure it works
 }
 ```
 
