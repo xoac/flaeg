@@ -14,17 +14,10 @@ import (
 	"time"
 )
 
-//StructField is a reflect.StructField with the optional field Short which contains the StrucTag "short"
-type StructField struct {
-	//TODO refactor
-	reflect.StructField
-	Short string
-}
-
-// GetTypesRecursive links in flagmap a flag with its StructField
+// GetTypesRecursive links in flagmap a flag with its reflect.StructField
 // You can whether provide objValue on a structure or a pointer to structure as first argument
 // Flags are genereted from field name or from StructTag
-func getTypesRecursive(objValue reflect.Value, flagmap map[string]StructField, key string) error {
+func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.StructField, key string) error {
 	name := key
 	switch objValue.Kind() {
 	case reflect.Struct:
@@ -51,8 +44,7 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]StructField, k
 				if _, ok := flagmap[name]; ok {
 					return errors.New("Tag already exists: " + name)
 				}
-				structField := StructField{objValue.Type().Field(i), objValue.Type().Field(i).Tag.Get("short")}
-				flagmap[name] = structField
+				flagmap[name] = objValue.Type().Field(i)
 
 				if err := getTypesRecursive(objValue.Field(i), flagmap, name); err != nil {
 					return err
@@ -117,7 +109,7 @@ func loadParsers(customParsers map[reflect.Type]Parser) (map[reflect.Type]Parser
 
 //ParseArgs : parses args return valmap map[flag]Getter, using parsers map[type]Getter
 //args must be formated as like as flag documentation. See https://golang.org/pkg/flag
-func parseArgs(args []string, flagmap map[string]StructField, parsers map[reflect.Type]Parser) (map[string]Parser, error) {
+func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers map[reflect.Type]Parser) (map[string]Parser, error) {
 	//Return var
 	valmap := make(map[string]Parser)
 	//Visitor in flag.Parse
@@ -137,9 +129,9 @@ func parseArgs(args []string, flagmap map[string]StructField, parsers map[reflec
 			newparserValue := reflect.New(reflect.TypeOf(parser).Elem())
 			newparserValue.Elem().Set(reflect.ValueOf(parser).Elem())
 			newparser := newparserValue.Interface().(Parser)
-			if len(structField.Short) == 1 {
-				// fmt.Printf("short : %s long : %s\n", structField.Short, flag)
-				flagSet.VarP(newparser, flag, structField.Short, structField.Tag.Get("description"))
+			if short := structField.Tag.Get("short"); len(short) == 1 {
+				// fmt.Printf("short : %s long : %s\n", short, flag)
+				flagSet.VarP(newparser, flag, short, structField.Tag.Get("description"))
 			} else {
 				flagSet.Var(newparser, flag, structField.Tag.Get("description"))
 			}
@@ -359,7 +351,7 @@ func setFields(fieldValue reflect.Value, val Parser) error {
 }
 
 //PrintHelp generates and prints command line help
-func PrintHelp(flagmap map[string]StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser) error {
+func PrintHelp(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser) error {
 	// Define a templates
 	// Using POSXE STD : http://pubs.opengroup.org/onlinepubs/9699919799/
 	const helper = `
@@ -386,8 +378,8 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 	printFlags := []string{}
 	for _, flag := range flags {
 		field := flagmap[flag]
-		if len(field.Short) == 1 {
-			printFlags = append(printFlags, "-"+field.Short+", --"+flag)
+		if short := field.Tag.Get("short"); len(short) == 1 {
+			printFlags = append(printFlags, "-"+short+", --"+flag)
 		} else {
 			printFlags = append(printFlags, "--"+flag)
 		}
@@ -434,7 +426,7 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 }
 
 //PrintError takes a not nil error and prints command line help
-func PrintError(err error, flagmap map[string]StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser) error {
+func PrintError(err error, flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser) error {
 	if err != flag.ErrHelp {
 		fmt.Printf("Error : %s\n", err)
 	}
@@ -454,7 +446,7 @@ func LoadWithParsers(config interface{}, defaultValue interface{}, args []string
 	// 	fmt.Printf("%s : %+v\n", typ.Name(), parser)
 	// }
 
-	tagsmap := make(map[string]StructField)
+	tagsmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), tagsmap, ""); err != nil {
 		return err
 	}
@@ -506,7 +498,7 @@ func LoadWithCommand(cmd *Command, cmdArgs []string, customParsers map[reflect.T
 		return err
 	}
 
-	tagsmap := make(map[string]StructField)
+	tagsmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(cmd.Config), tagsmap, ""); err != nil {
 		return err
 	}
@@ -528,7 +520,7 @@ func LoadWithCommand(cmd *Command, cmdArgs []string, customParsers map[reflect.T
 }
 
 //PrintHelpWithCommand generates and prints command line help for a Command
-func PrintHelpWithCommand(flagmap map[string]StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser, cmd *Command, subCmd []*Command) error {
+func PrintHelpWithCommand(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser, cmd *Command, subCmd []*Command) error {
 	// Define a templates
 	// Using POSXE STD : http://pubs.opengroup.org/onlinepubs/9699919799/
 	const helper = `{{.ProgDescription}}
@@ -557,8 +549,8 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 	printFlags := []string{}
 	for _, flag := range flags {
 		field := flagmap[flag]
-		if len(field.Short) == 1 {
-			printFlags = append(printFlags, "-"+field.Short+", --"+flag)
+		if short := field.Tag.Get("short"); len(short) == 1 {
+			printFlags = append(printFlags, "-"+short+", --"+flag)
 		} else {
 			printFlags = append(printFlags, "--"+flag)
 		}
@@ -618,7 +610,7 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 }
 
 //PrintErrorWithCommand takes a not nil error and prints command line help
-func PrintErrorWithCommand(err error, flagmap map[string]StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser, cmd *Command, subCmd []*Command) error {
+func PrintErrorWithCommand(err error, flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser, cmd *Command, subCmd []*Command) error {
 	if err != flag.ErrHelp {
 		fmt.Printf("Error : %s\n", err)
 	}

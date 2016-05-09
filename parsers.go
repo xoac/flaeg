@@ -18,11 +18,6 @@ type Parser interface {
 // -- bool Value
 type boolValue bool
 
-func newBoolValue(val bool, p *bool) *boolValue {
-	*p = val
-	return (*boolValue)(p)
-}
-
 func (b *boolValue) Set(s string) error {
 	v, err := strconv.ParseBool(s)
 	*b = boolValue(v)
@@ -49,11 +44,6 @@ type boolFlag interface {
 // -- int Value
 type intValue int
 
-func newIntValue(val int, p *int) *intValue {
-	*p = val
-	return (*intValue)(p)
-}
-
 func (i *intValue) Set(s string) error {
 	v, err := strconv.ParseInt(s, 0, 64)
 	*i = intValue(v)
@@ -70,11 +60,6 @@ func (i *intValue) SetValue(val interface{}) {
 
 // -- int64 Value
 type int64Value int64
-
-func newInt64Value(val int64, p *int64) *int64Value {
-	*p = val
-	return (*int64Value)(p)
-}
 
 func (i *int64Value) Set(s string) error {
 	v, err := strconv.ParseInt(s, 0, 64)
@@ -93,11 +78,6 @@ func (i *int64Value) SetValue(val interface{}) {
 // -- uint Value
 type uintValue uint
 
-func newUintValue(val uint, p *uint) *uintValue {
-	*p = val
-	return (*uintValue)(p)
-}
-
 func (i *uintValue) Set(s string) error {
 	v, err := strconv.ParseUint(s, 0, 64)
 	*i = uintValue(v)
@@ -114,11 +94,6 @@ func (i *uintValue) SetValue(val interface{}) {
 
 // -- uint64 Value
 type uint64Value uint64
-
-func newUint64Value(val uint64, p *uint64) *uint64Value {
-	*p = val
-	return (*uint64Value)(p)
-}
 
 func (i *uint64Value) Set(s string) error {
 	v, err := strconv.ParseUint(s, 0, 64)
@@ -137,11 +112,6 @@ func (i *uint64Value) SetValue(val interface{}) {
 // -- string Value
 type stringValue string
 
-func newStringValue(val string, p *string) *stringValue {
-	*p = val
-	return (*stringValue)(p)
-}
-
 func (s *stringValue) Set(val string) error {
 	*s = stringValue(val)
 	return nil
@@ -157,11 +127,6 @@ func (s *stringValue) SetValue(val interface{}) {
 
 // -- float64 Value
 type float64Value float64
-
-func newFloat64Value(val float64, p *float64) *float64Value {
-	*p = val
-	return (*float64Value)(p)
-}
 
 func (f *float64Value) Set(s string) error {
 	v, err := strconv.ParseFloat(s, 64)
@@ -179,11 +144,6 @@ func (f *float64Value) SetValue(val interface{}) {
 
 // -- time.Duration Value
 type durationValue time.Duration
-
-func newDurationValue(val time.Duration, p *time.Duration) *durationValue {
-	*p = val
-	return (*durationValue)(p)
-}
 
 func (d *durationValue) Set(s string) error {
 	v, err := time.ParseDuration(s)

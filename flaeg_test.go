@@ -81,7 +81,7 @@ func newConfiguration() *Configuration {
 
 func TestGetTypesRecursive(t *testing.T) {
 	config := newConfiguration()
-	flagmap := make(map[string]StructField)
+	flagmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -179,7 +179,7 @@ func TestLoadParsers(t *testing.T) {
 func TestParseArgsTrivialFlags(t *testing.T) {
 	//We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]StructField)
+	flagmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -236,7 +236,7 @@ func TestParseArgsTrivialFlags(t *testing.T) {
 func TestParseArgsShortFlags(t *testing.T) {
 	//We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]StructField)
+	flagmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -290,7 +290,7 @@ func TestParseArgsShortFlags(t *testing.T) {
 func TestParseArgsPointerFlag(t *testing.T) {
 	//We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]StructField)
+	flagmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -347,7 +347,7 @@ func TestParseArgsPointerFlag(t *testing.T) {
 func TestParseArgsUnderPointerFlag(t *testing.T) {
 	//We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]StructField)
+	flagmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -406,7 +406,7 @@ func TestParseArgsUnderPointerFlag(t *testing.T) {
 func TestParseArgsPointerFlagUnderPointerFlag(t *testing.T) {
 	//We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]StructField)
+	flagmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -465,7 +465,7 @@ func TestParseArgsPointerFlagUnderPointerFlag(t *testing.T) {
 func TestParseArgsCustomFlag(t *testing.T) {
 	//We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]StructField)
+	flagmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -523,7 +523,7 @@ func TestParseArgsCustomFlag(t *testing.T) {
 func TestParseArgsAll(t *testing.T) {
 	//We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]StructField)
+	flagmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -1570,7 +1570,7 @@ func TestLoadInitConfigAllDefaultSomeFlag(t *testing.T) {
 func TestParseArgsInvalidArgument(t *testing.T) {
 	//We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]StructField)
+	flagmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -1610,7 +1610,7 @@ func TestParseArgsInvalidArgument(t *testing.T) {
 func TestParseArgsErrorUnknownFlag(t *testing.T) {
 	//We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]StructField)
+	flagmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
@@ -1650,7 +1650,7 @@ func TestParseArgsErrorUnknownFlag(t *testing.T) {
 func TestPrintErrorInvalidArgument(t *testing.T) {
 	//We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]StructField)
+	flagmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
