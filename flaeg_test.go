@@ -1734,8 +1734,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                config,
 		DefaultPointersConfig: defaultPointers,
 		//test in run
-		Run: func(InitalizedConfig interface{}) error {
-			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+		Run: func() error {
+			fmt.Printf("Run with config :\n%+v\n", config)
 			//CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
@@ -1743,8 +1743,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
-			if !reflect.DeepEqual(InitalizedConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
+			if !reflect.DeepEqual(config, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 			}
 			return nil
 		},
@@ -1794,8 +1794,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
 		//test in run
-		Run: func(InitalizedConfig interface{}) error {
-			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+		Run: func() error {
+			fmt.Printf("Run with config :\n%+v\n", rootConfig)
 			//CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
@@ -1803,8 +1803,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
-			if !reflect.DeepEqual(InitalizedConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
+			if !reflect.DeepEqual(rootConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
 			}
 			return nil
 		},
@@ -1817,16 +1817,11 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
 		//test in run
-		Run: func(InitalizedConfig interface{}) error {
-			//cast
-			config, ok := InitalizedConfig.(*VersionConfig)
-			if !ok {
-				return fmt.Errorf("Cannot convert the config into VersionConfig")
-			}
-			fmt.Printf("Version %s \n", config.Version)
+		Run: func() error {
+			fmt.Printf("Version %s \n", versionConfig.Version)
 			//CHECK
-			if config.Version != "0.1" {
-				return fmt.Errorf("expected 0.1 got %s", config.Version)
+			if versionConfig.Version != "0.1" {
+				return fmt.Errorf("expected 0.1 got %s", versionConfig.Version)
 			}
 			return nil
 
@@ -1874,8 +1869,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
 		//test in run
-		Run: func(InitalizedConfig interface{}) error {
-			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+		Run: func() error {
+			fmt.Printf("Run with config :\n%+v\n", rootConfig)
 			//CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
@@ -1883,8 +1878,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
-			if !reflect.DeepEqual(InitalizedConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
+			if !reflect.DeepEqual(rootConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
 			}
 			return nil
 		},
@@ -1897,16 +1892,11 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
 		//test in run
-		Run: func(InitalizedConfig interface{}) error {
-			//cast
-			config, ok := InitalizedConfig.(*VersionConfig)
-			if !ok {
-				return fmt.Errorf("Cannot convert the config into VersionConfig")
-			}
-			fmt.Printf("Version %s \n", config.Version)
+		Run: func() error {
+			fmt.Printf("Version %s \n", versionConfig.Version)
 			//CHECK
-			if config.Version != "2.2beta" {
-				return fmt.Errorf("expected 2.2beta got %s", config.Version)
+			if versionConfig.Version != "2.2beta" {
+				return fmt.Errorf("expected 2.2beta got %s", versionConfig.Version)
 			}
 			return nil
 
@@ -1954,8 +1944,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
 		//test in run
-		Run: func(InitalizedConfig interface{}) error {
-			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+		Run: func() error {
+			fmt.Printf("Run with config :\n%+v\n", rootConfig)
 			//CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
@@ -1963,8 +1953,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
-			if !reflect.DeepEqual(InitalizedConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
+			if !reflect.DeepEqual(rootConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
 			}
 			return nil
 		},
@@ -1977,13 +1967,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
 		//test in run
-		Run: func(InitalizedConfig interface{}) error {
-			//cast
-			config, ok := InitalizedConfig.(*VersionConfig)
-			if !ok {
-				return fmt.Errorf("Cannot convert the config into VersionConfig")
-			}
-			fmt.Printf("Version %s \n", config.Version)
+		Run: func() error {
+			fmt.Printf("Version %s \n", versionConfig.Version)
 			return nil
 		},
 	}
@@ -2027,8 +2012,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
 		//test in run
-		Run: func(InitalizedConfig interface{}) error {
-			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+		Run: func() error {
+			fmt.Printf("Run with config :\n%+v\n", rootConfig)
 			//CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
@@ -2036,8 +2021,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
-			if !reflect.DeepEqual(InitalizedConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
+			if !reflect.DeepEqual(rootConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
 			}
 			return nil
 		},
@@ -2050,13 +2035,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
 		//test in run
-		Run: func(InitalizedConfig interface{}) error {
-			//cast
-			config, ok := InitalizedConfig.(*VersionConfig)
-			if !ok {
-				return fmt.Errorf("Cannot convert the config into VersionConfig")
-			}
-			fmt.Printf("Version %s \n", config.Version)
+		Run: func() error {
+			fmt.Printf("Version %s \n", versionConfig.Version)
 			return nil
 		},
 	}
@@ -2104,8 +2084,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
 		//test in run
-		Run: func(InitalizedConfig interface{}) error {
-			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+		Run: func() error {
+			fmt.Printf("Run with config :\n%+v\n", rootConfig)
 			//CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
@@ -2113,8 +2093,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
-			if !reflect.DeepEqual(InitalizedConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
+			if !reflect.DeepEqual(rootConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
 			}
 			return nil
 		},
@@ -2127,13 +2107,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
 		//test in run
-		Run: func(InitalizedConfig interface{}) error {
-			//cast
-			config, ok := InitalizedConfig.(*VersionConfig)
-			if !ok {
-				return fmt.Errorf("Cannot convert the config into VersionConfig")
-			}
-			fmt.Printf("Version %s \n", config.Version)
+		Run: func() error {
+			fmt.Printf("Version %s \n", versionConfig.Version)
 			return nil
 		},
 	}
@@ -2179,8 +2154,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
 		//test in run
-		Run: func(InitalizedConfig interface{}) error {
-			fmt.Printf("Run with config :\n%+v\n", InitalizedConfig)
+		Run: func() error {
+			fmt.Printf("Run with config :\n%+v\n", rootConfig)
 			//CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
@@ -2188,8 +2163,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
-			if !reflect.DeepEqual(InitalizedConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, InitalizedConfig)
+			if !reflect.DeepEqual(rootConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
 			}
 			return nil
 		},
@@ -2202,13 +2177,8 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
 		//test in run
-		Run: func(InitalizedConfig interface{}) error {
-			//cast
-			config, ok := InitalizedConfig.(*VersionConfig)
-			if !ok {
-				return fmt.Errorf("Cannot convert the config into VersionConfig")
-			}
-			fmt.Printf("Version %s \n", config.Version)
+		Run: func() error {
+			fmt.Printf("Version %s \n", versionConfig.Version)
 			return nil
 
 		},
@@ -2228,7 +2198,94 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	}
 }
 
-func TestNilPointersFieldsEmptyConfig(t *testing.T) {
+func TestParseCommandVersionInitConfigNoDefaultAllFlag(t *testing.T) {
+	//INIT
+	//init root config
+	rootConfig := newConfiguration()
+	//init root default pointers
+	rootDefaultPointers := newDefaultPointersConfiguration()
+	//init version config
+	versionConfig := &VersionConfig{"0.1"}
+
+	//init args
+	args := []string{
+		"--toto",  //no effect
+		"version", //call Command
+		"-v2.2beta",
+	}
+
+	//init commands
+	//root command
+	rootCmd := &Command{
+		Name: "flaegtest",
+		Description: `flaegtest is a test program made to to test flaeg library.
+Complete documentation is available at https://github.com/containous/flaeg`,
+
+		Config:                rootConfig,
+		DefaultPointersConfig: rootDefaultPointers,
+		//test in run
+		Run: func() error {
+			fmt.Printf("Run with config :\n%+v\n", rootConfig)
+			//CHECK
+			check := newConfiguration()
+			check.LogLevel = "INFO"
+			check.Db = newDefaultPointersConfiguration().Db
+			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
+			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+
+			if !reflect.DeepEqual(rootConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+			}
+			return nil
+		},
+	}
+	//vesion command
+	VersionCmd := &Command{
+		Name:        "version",
+		Description: `Print version`,
+
+		Config:                versionConfig,
+		DefaultPointersConfig: versionConfig,
+		//test in run
+		Run: func() error {
+			fmt.Printf("Version %s \n", versionConfig.Version)
+			//CHECK
+			if versionConfig.Version != "2.2beta" {
+				return fmt.Errorf("expected 2.2beta got %s", versionConfig.Version)
+			}
+			return nil
+
+		},
+	}
+
+	//TEST
+	//init flaeg
+	flaeg := New(rootCmd, args)
+	//add custom parser to fleag
+	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	//add command Version
+	flaeg.AddCommand(VersionCmd)
+
+	//run test
+	cmd, err := flaeg.GetCommand()
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	result, err := flaeg.Parse(cmd)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//check
+	check := &VersionConfig{"2.2beta"}
+
+	if !reflect.DeepEqual(result.Config, check) {
+		t.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, result.Config)
+	}
+
+}
+
+func TestSetPointersNilEmptyConfig(t *testing.T) {
 	//run test
 	config := &Configuration{}
 	objVal := reflect.ValueOf(config)
@@ -2246,7 +2303,7 @@ func TestNilPointersFieldsEmptyConfig(t *testing.T) {
 	}
 }
 
-func TestNilPointersFieldsDefaultPointersConfig(t *testing.T) {
+func TestSetPointersNilDefaultPointersConfig(t *testing.T) {
 	//run test
 	objVal := reflect.ValueOf(newDefaultPointersConfiguration())
 	nilPointersConfig, err := setPointersNil(objVal)

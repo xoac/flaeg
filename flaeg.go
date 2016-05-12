@@ -487,12 +487,13 @@ type Command struct {
 	Description           string
 	Config                interface{}
 	DefaultPointersConfig interface{} //TODO:case DefaultPointersConfig is nil
-	Run                   func(InitalizedConfig interface{}) error
+	Run                   func() error
 }
 
 //LoadWithCommand initializes config : struct fields given by reference, with args : arguments.
 //Some custom parsers and some subCommand may be given.
 func LoadWithCommand(cmd *Command, cmdArgs []string, customParsers map[reflect.Type]Parser, subCommand []*Command) error {
+
 	parsers, err := loadParsers(customParsers)
 	if err != nil {
 		return err
@@ -524,11 +525,14 @@ func PrintHelpWithCommand(flagmap map[string]reflect.StructField, defaultValmap 
 	// Define a templates
 	// Using POSXE STD : http://pubs.opengroup.org/onlinepubs/9699919799/
 	const helper = `{{.ProgDescription}}
+	
 Usage: {{.ProgName}} [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
    or: {{.ProgName}} [--flag[=true|false| ]] [-f[true|false| ]] ...     set true/false to boolean flag(s)
-{{if .SubCommands}}Available Commands:{{range $subCmdName, $subCmdDesc := .SubCommands}}
+{{if .SubCommands}}
+Available Commands:{{range $subCmdName, $subCmdDesc := .SubCommands}}
 {{printf "\t%-50s %s" $subCmdName $subCmdDesc}}{{end}}
-Use "{{.ProgName}} [command] --help" for more information about a command.{{end}}
+Use "{{.ProgName}} [command] --help" for more information about a command.
+{{end}}
 Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$defaultValues := index $.DefaultValues $j}}
 {{printf "\t%-50s %s (default \"%s\")" $flag $description $defaultValues}}{{end}}`
 
@@ -585,8 +589,8 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 		tempStruct.ProgName = cmd.Name
 		tempStruct.ProgDescription = cmd.Description
 		tempStruct.SubCommands = map[string]string{}
-		if len(subCmd) > 0 {
-			for _, c := range subCmd {
+		if len(subCmd) > 1 && cmd == subCmd[0] {
+			for _, c := range subCmd[1:] {
 				tempStruct.SubCommands[c.Name] = c.Description
 			}
 		}
@@ -622,16 +626,17 @@ func PrintErrorWithCommand(err error, flagmap map[string]reflect.StructField, de
 //and row arguments (command and/or flags)
 //a map of custom parsers could be use
 type Flaeg struct {
-	rootCommand   *Command
-	commands      []*Command
+	calledCommand *Command
+	commands      []*Command ///rootCommand is th fist one in this slice
 	args          []string
+	commmandArgs  []string
 	customParsers map[reflect.Type]Parser
 }
 
 //New creats and initialize a pointer on Flaeg
 func New(rootCommand *Command, args []string) *Flaeg {
 	var f Flaeg
-	f.rootCommand = rootCommand
+	f.commands = []*Command{rootCommand}
 	f.args = args
 	f.customParsers = map[reflect.Type]Parser{}
 	return &f
@@ -649,41 +654,63 @@ func (f *Flaeg) AddParser(typ reflect.Type, parser Parser) {
 
 // Run calls the command with flags given as agruments
 func (f *Flaeg) Run() error {
+	if f.calledCommand == nil {
+		if _, err := f.GetCommand(); err != nil {
+			return err
+		}
+	}
+	if _, err := f.Parse(f.calledCommand); err != nil {
+		return err
+	}
+	return f.calledCommand.Run()
+}
+
+// Parse calls Flaeg Load Function end returns the parsed command structure (by reference)
+// It returns nil and a not nil error if it fails
+func (f *Flaeg) Parse(cmd *Command) (*Command, error) {
+	if f.calledCommand == nil {
+		f.commmandArgs = f.args
+	}
+	if err := LoadWithCommand(cmd, f.commmandArgs, f.customParsers, f.commands); err != nil {
+		return nil, err
+	}
+	return cmd, nil
+}
+
+// GetCommand splits args and returns the called command (by reference)
+// It returns nil and a not nil error if it fails
+func (f *Flaeg) GetCommand() (*Command, error) {
 	// split args
 	//TODO : put it in func and unit test it
 	commandName := ""
-	commandArgs := f.args
+	f.commmandArgs = f.args
 	cptCommands := 0
 	for i, arg := range f.args {
 		if string(arg[0]) != "-" {
 			//TODO case sensitivity
 			commandName = strings.ToLower(arg)
-			commandArgs = f.args[i+1:]
+			f.commmandArgs = f.args[i+1:]
 			cptCommands++
 		}
 	}
+	// fmt.Printf("cmdName %s, cmdArgs %s, nbCmd %d\n", commandName, commandArgs, cptCommands)
 	// check args : 0 ou 1 sous commande
 	switch cptCommands {
-	// run sous commande si présente, ou root commande sinon
 	case 0:
 		//initialize Config
-		if err := LoadWithCommand(f.rootCommand, commandArgs, f.customParsers, f.commands); err != nil {
-			return err
-		}
-		return f.rootCommand.Run(f.rootCommand.Config) //Ref ?
+		f.calledCommand = f.commands[0]
+		return f.calledCommand, nil
 	case 1:
 		//look for command
 		for _, command := range f.commands {
 			if commandName == command.Name {
 				//initialize Config
-				if err := LoadWithCommand(command, commandArgs, f.customParsers, nil); err != nil {
-					return err
-				}
-				return command.Run(command.Config)
+				f.calledCommand = command
+				return f.calledCommand, nil
 			}
 		}
-		return fmt.Errorf("Command %s not found", commandName)
+		return nil, fmt.Errorf("Command %s not found", commandName)
 	default:
-		return fmt.Errorf("Too many commands called, expexted 0 or 1 got %d", cptCommands)
+		return nil, fmt.Errorf("Too many commands called, expexted 0 or 1 got %d", cptCommands)
 	}
 }
