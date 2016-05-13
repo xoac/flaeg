@@ -112,7 +112,7 @@ type OwnerInfo struct {
 ### Flags
 Flaeg is POSIX compliant using [pflag](https://github.com/ogier/pflag) package.
 Flaeg concats the names of fields to generate the flags. They are not case sensitive. 
-For example, the field `ConnectionMax64` in `OwnerInfo` sub-Structure which is in `Configuration` Structure will be `--db.connexionmax64`.
+For example, the field `ConnectionMax64` in `OwnerInfo` sub-Structure which is in `Configuration` Structure will be `--db.connectionmax64`.
 But you can overwrite it with the `StructTag` `long` as like as the field `ConnectionMax` which is flagged `--db.comax`
 Finally, you can add a short flag (1 character) using the `StructTag` `short`, like in the field `LogLevel` with the short flags `-l` in addition to the flag`--loglevel`
 
