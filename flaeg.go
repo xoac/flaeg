@@ -28,9 +28,12 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.Struct
 					return err
 				}
 			} else if len(objValue.Type().Field(i).Tag.Get("description")) > 0 {
+				fieldName := objValue.Type().Field(i).Name
+				if !isExported(fieldName) {
+					return fmt.Errorf("Flied %s is an unexported field", fieldName)
+				}
 
 				name += objValue.Type().Name()
-				fieldName := objValue.Type().Field(i).Name
 				if tag := objValue.Type().Field(i).Tag.Get("long"); len(tag) > 0 {
 					fieldName = tag
 				}
@@ -250,8 +253,8 @@ func setPointersNil(objValue reflect.Value) (reflect.Value, error) {
 	starNilPointersObjVal.Set(starObjValue)
 
 	for i := 0; i < nilPointersObjVal.Elem().NumField(); i++ {
-		if nilPointersObjVal.Elem().Field(i).Kind() == reflect.Ptr {
-			nilPointersObjVal.Elem().Field(i).Set(reflect.Zero(nilPointersObjVal.Elem().Field(i).Type()))
+		if field := nilPointersObjVal.Elem().Field(i); field.Kind() == reflect.Ptr && field.CanSet() {
+			field.Set(reflect.Zero(field.Type()))
 		}
 	}
 	return nilPointersObjVal, nil
@@ -715,4 +718,16 @@ func (f *Flaeg) GetCommand() (*Command, error) {
 	default:
 		return nil, fmt.Errorf("Too many commands called, expexted 0 or 1 got %d", cptCommands)
 	}
+}
+
+//isExported return true is the field (from fieldName) is exported,
+//else false
+func isExported(fieldName string) bool {
+	if len(fieldName) < 1 {
+		return false
+	}
+	if string(fieldName[0]) == strings.ToUpper(string(fieldName[0])) {
+		return true
+	}
+	return false
 }

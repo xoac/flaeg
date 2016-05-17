@@ -2411,3 +2411,71 @@ func TestSetPointersNilFullConfig(t *testing.T) {
 		t.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", checkInit, objVal.Interface())
 	}
 }
+
+type ConfigPointerField struct {
+	PtrSubConfig *SubConfigWithUnexportedField `description:"pointer on a SubConfig with one unexported pointer field"`
+}
+type SubConfigWithUnexportedField struct {
+	Exported        string `description:"Exported string field"`
+	ptrSubSubConfig *SubSubConfig
+}
+type SubSubConfig struct {
+	unexported string
+}
+
+func TestGetDefaultValueUnexportedFieldUnderPointer(t *testing.T) {
+	//init
+	config := &ConfigPointerField{}
+	defaultPointersConfig := &ConfigPointerField{
+		PtrSubConfig: &SubConfigWithUnexportedField{
+			Exported: "ExportedSubFieldDefault",
+		},
+	}
+	defaultValmap := make(map[string]reflect.Value)
+	//TEST
+	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defaultPointersConfig), defaultValmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	//check
+	checkValue := map[string]reflect.Value{
+		"ptrsubconfig":          reflect.ValueOf(&SubConfigWithUnexportedField{"ExportedSubFieldDefault", nil}),
+		"ptrsubconfig.exported": reflect.ValueOf("ExportedSubFieldDefault"),
+	}
+	if len(checkValue) != len(defaultValmap) {
+		t.Fatalf("Error, expected %d elements in defaultValmap got %d", len(checkValue), len(defaultValmap))
+	}
+	for flag, val := range defaultValmap {
+		if !reflect.DeepEqual(checkValue[flag].Interface(), val.Interface()) {
+			t.Fatalf("Error flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], val)
+		}
+	}
+}
+
+type ConfigWithUnexportedField struct {
+	Exported string `description:"Exported string field"`
+	other    string `description:"Non-exported string field"`
+}
+
+func TestGetTypesUnexported(t *testing.T) {
+	config := &ConfigWithUnexportedField{}
+	flagmap := make(map[string]reflect.StructField)
+	err := getTypesRecursive(reflect.ValueOf(config), flagmap, "")
+	checkErr := "Flied other is an unexported field"
+	if err == nil || !strings.Contains(err.Error(), checkErr) {
+		t.Errorf("Expected error %s\ngot %s", checkErr, err)
+	}
+}
+
+func TestIsExported(t *testing.T) {
+	checkTab := map[string]bool{
+		"lowerCase": false,
+		"UpperCase": true,
+		"a":         false,
+		"Z":         true,
+	}
+	for name, check := range checkTab {
+		if exp := isExported(name); exp != check {
+			t.Errorf("Expected %t got %t", check, exp)
+		}
+	}
+}
