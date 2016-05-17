@@ -611,6 +611,45 @@ func TestParseArgsAll(t *testing.T) {
 	}
 }
 
+func TestParseArgsErrorNoParser(t *testing.T) {
+	//init config
+	config := &Configuration{}
+	//init valmap
+	flagmap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	//init parsers
+	parsers := map[reflect.Type]Parser{}
+	var boolParser boolValue
+	parsers[reflect.TypeOf(true)] = &boolParser
+	var intParser intValue
+	parsers[reflect.TypeOf(1)] = &intParser
+	var int64Parser int64Value
+	parsers[reflect.TypeOf(int64(1))] = &int64Parser
+	var uintParser uintValue
+	parsers[reflect.TypeOf(uint(1))] = &uintParser
+	var uint64Parser uint64Value
+	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
+	var stringParser stringValue
+	parsers[reflect.TypeOf("")] = &stringParser
+	var float64Parser float64Value
+	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
+	var durationParser durationValue
+	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var timeParser timeValue
+	parsers[reflect.TypeOf(time.Now())] = &timeParser
+	//init args
+	args := []string{}
+	//test
+	_, err := parseArgs(args, flagmap, parsers)
+	//check
+	checkErr := "owner.servers :No parser for type []flaeg.ServerInfo"
+	if err == nil || !strings.Contains(err.Error(), checkErr) {
+		t.Errorf("Expexted error %s\ngot %s", checkErr, err)
+	}
+}
+
 //Test getDefaultValue on a full complex struct, with annonymous field, and not nil pointers
 func TestGetDefaultValueInitConfigAllDefault(t *testing.T) {
 	//INIT
@@ -1529,7 +1568,7 @@ func TestLoadWithParsersNoConfigAllDefaultSomeFlag(t *testing.T) {
 }
 
 //Test Load without parsers on not empty config with all default values on pointers and with some flags called
-func TestLoadInitConfigAllDefaultSomeFlag(t *testing.T) {
+func TestLoadInitConfigAllDefaultSomeFlagErrorParser(t *testing.T) {
 	//INIT
 	//init config
 	config := newConfiguration()
@@ -1545,24 +1584,12 @@ func TestLoadInitConfigAllDefaultSomeFlag(t *testing.T) {
 	}
 
 	//TEST
-	if err := Load(config, defaultPointers, args); err != nil {
-		t.Errorf("Error %s", err.Error())
-	}
+	err := Load(config, defaultPointers, args)
 
-	//CHECK
-	// fmt.Printf("Got : %+v\n", config)
-
-	check := newConfiguration()
-	check.LogLevel = "INFO"
-	check.Db = newDefaultPointersConfiguration().Db
-	check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
-	check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
-
-	if !reflect.DeepEqual(config, check) {
-		if !reflect.DeepEqual(config.Owner, check.Owner) {
-			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
-		}
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+	//check
+	checkErr := "owner.servers :No parser for type []flaeg.ServerInfo"
+	if err == nil || !strings.Contains(err.Error(), checkErr) {
+		t.Errorf("Expexted error %s\ngot %s", checkErr, err)
 	}
 }
 
