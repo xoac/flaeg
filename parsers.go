@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -174,4 +175,30 @@ func (t *timeValue) String() string { return (*time.Time)(t).String() }
 
 func (t *timeValue) SetValue(val interface{}) {
 	*t = timeValue(val.(time.Time))
+}
+
+//SliceStrings parse slice of strings
+type SliceStrings []string
+
+//Set adds strings elem into the the parser
+//it splits str on , and ;
+func (s *SliceStrings) Set(str string) error {
+	fargs := func(c rune) bool {
+		return c == ',' || c == ';'
+	}
+	// get function
+	slice := strings.FieldsFunc(str, fargs)
+	*s = append(*s, slice...)
+	return nil
+}
+
+//Get []string
+func (s *SliceStrings) Get() interface{} { return []string(*s) }
+
+//String return slice in a string
+func (s *SliceStrings) String() string { return fmt.Sprintf("%v", *s) }
+
+//SetValue sets []string into the parser
+func (s *SliceStrings) SetValue(val interface{}) {
+	*s = SliceStrings(val.([]string))
 }
