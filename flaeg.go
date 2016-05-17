@@ -137,7 +137,7 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 			}
 			newParsers[flag] = newparser
 		} else {
-			return nil, fmt.Errorf("%s :No parser for type %s", flag, structField.Type)
+			fmt.Printf("No parser for type %s\n", structField.Type)
 		}
 	}
 
@@ -324,7 +324,7 @@ func fillStructRecursive(objValue reflect.Value, defaultPointerValmap map[string
 				// fmt.Printf("%s  : set default value %+v\n", name, defVal)
 				objValue.Set(defVal)
 			} else {
-				return fmt.Errorf("flag %s default value not provided", name)
+				return fmt.Errorf("flag %s default value not provided\n", name)
 			}
 		}
 		if !objValue.IsNil() && contains {
@@ -430,9 +430,7 @@ func PrintError(err error, flagmap map[string]reflect.StructField, defaultValmap
 	if err != flag.ErrHelp {
 		fmt.Printf("Error : %s\n", err)
 	}
-	if !strings.Contains(err.Error(), ":No parser for type") {
-		PrintHelp(flagmap, defaultValmap, parsers)
-	}
+	PrintHelp(flagmap, defaultValmap, parsers)
 	return err
 }
 
