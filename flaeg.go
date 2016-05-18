@@ -653,8 +653,12 @@ func (f *Flaeg) AddCommand(command *Command) {
 }
 
 //AddParser adds custom parser for a type to the map of custom parsers
-func (f *Flaeg) AddParser(typ reflect.Type, parser Parser) {
+func (f *Flaeg) AddParser(typ reflect.Type, parser Parser) error {
+	if parserType := reflect.TypeOf(parser.Get()); !typ.ConvertibleTo(parserType) {
+		return fmt.Errorf("type %s is not convertible to type %s", typ, parserType)
+	}
 	f.customParsers[typ] = parser
+	return nil
 }
 
 // Run calls the command with flags given as agruments

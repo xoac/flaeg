@@ -2479,3 +2479,28 @@ func TestIsExported(t *testing.T) {
 		}
 	}
 }
+func TestAddParser(t *testing.T) {
+	f := &Flaeg{}
+	f.customParsers = map[reflect.Type]Parser{}
+	err := f.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	if err != nil {
+		t.Errorf("Error : %s", err)
+	}
+	//check
+	if f.customParsers[reflect.TypeOf([]ServerInfo{})] == nil {
+		t.Errorf("Error : Expected a parser on %s", reflect.TypeOf([]ServerInfo{}))
+	}
+}
+
+func TestAddParserWrongType(t *testing.T) {
+	f := &Flaeg{}
+	f.customParsers = map[reflect.Type]Parser{}
+
+	var boolParser boolValue
+	err := f.AddParser(reflect.TypeOf([]ServerInfo{}), &boolParser)
+	//check
+	checkErr := "is not convertible to type"
+	if err == nil || !strings.Contains(err.Error(), checkErr) {
+		t.Errorf("Expected error %s\n got %s", checkErr, err)
+	}
+}
