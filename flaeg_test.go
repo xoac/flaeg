@@ -1781,7 +1781,9 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	//init flaeg
 	flaeg := New(rootCmd, args)
 	//add custom parser to fleag
-	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	if err := flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{}); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 
 	//run test
 	if err := flaeg.Run(); err != nil {
@@ -1859,7 +1861,9 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	//init flaeg
 	flaeg := New(rootCmd, args)
 	//add custom parser to fleag
-	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	if err := flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{}); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 	//add command Version
 	flaeg.AddCommand(VersionConfig)
 
@@ -1934,7 +1938,9 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	//init flaeg
 	flaeg := New(rootCmd, args)
 	//add custom parser to fleag
-	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	if err := flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{}); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 	//add command Version
 	flaeg.AddCommand(VersionConfig)
 
@@ -2004,7 +2010,9 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	//init flaeg
 	flaeg := New(rootCmd, args)
 	//add custom parser to fleag
-	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	if err := flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{}); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 	//add command Version
 	flaeg.AddCommand(VersionConfig)
 
@@ -2072,7 +2080,9 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	//init flaeg
 	flaeg := New(rootCmd, args)
 	//add custom parser to fleag
-	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	if err := flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{}); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 	//add command Version
 	flaeg.AddCommand(VersionConfig)
 
@@ -2144,7 +2154,9 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	//init flaeg
 	flaeg := New(rootCmd, args)
 	//add custom parser to fleag
-	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	if err := flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{}); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 	//add command Version
 	flaeg.AddCommand(VersionConfig)
 
@@ -2215,7 +2227,9 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	//init flaeg
 	flaeg := New(rootCmd, args)
 	//add custom parser to fleag
-	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	if err := flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{}); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 	//add command Version
 	flaeg.AddCommand(VersionConfig)
 
@@ -2289,7 +2303,9 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	//init flaeg
 	flaeg := New(rootCmd, args)
 	//add custom parser to fleag
-	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	if err := flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{}); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
 	//add command Version
 	flaeg.AddCommand(VersionCmd)
 
