@@ -124,7 +124,7 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 	flagSet := flag.NewFlagSet("flaeg.Load", flag.ContinueOnError)
 	//Disable output
 	flagSet.SetOutput(ioutil.Discard)
-
+	var errMissingParser error
 	for flag, structField := range flagmap {
 		//for _, flag := range flags {
 		//structField := flagmap[flag]
@@ -140,7 +140,8 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 			}
 			newParsers[flag] = newparser
 		} else {
-			return nil, fmt.Errorf("%s :No parser for type %s", flag, structField.Type)
+			errMissingParser = fmt.Errorf("%s :No parser for type %s", flag, structField.Type)
+			// return nil, fmt.Errorf("%s :No parser for type %s", flag, structField.Type)
 		}
 	}
 
@@ -156,7 +157,7 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 		valmap[flag.Name] = newParsers[flag.Name]
 	}
 
-	return valmap, nil
+	return valmap, errMissingParser
 }
 
 func getDefaultValue(defaultValue reflect.Value, defaultPointersValue reflect.Value, defaultValmap map[string]reflect.Value, key string) error {
@@ -479,7 +480,27 @@ func LoadWithParsers(config interface{}, defaultValue interface{}, args []string
 //Load initializes config : struct fields given by reference, with args : arguments.
 //Some custom parsers may be given.
 func Load(config interface{}, defaultValue interface{}, args []string) error {
-	return LoadWithParsers(config, defaultValue, args, nil)
+	parsers, err := loadParsers(nil)
+	if err != nil {
+		return err
+	}
+	tagsmap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), tagsmap, ""); err != nil {
+		return err
+	}
+	defaultValmap := make(map[string]reflect.Value)
+	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defaultValue), defaultValmap, ""); err != nil {
+		return err
+	}
+	valmap, errParseArgs := parseArgs(args, tagsmap, parsers)
+	if errParseArgs != nil && !strings.Contains(errParseArgs.Error(), "No parser for type") {
+		return PrintError(errParseArgs, tagsmap, defaultValmap, parsers)
+	}
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
+		return err
+	}
+
+	return errParseArgs
 }
 
 // Command structure contains program/command information (command name and description)

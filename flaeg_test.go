@@ -640,14 +640,21 @@ func TestParseArgsErrorNoParser(t *testing.T) {
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	//init args
-	args := []string{}
+	args := []string{"-lCONTINUE"}
 	//test
-	_, err := parseArgs(args, flagmap, parsers)
+	valmap, err := parseArgs(args, flagmap, parsers)
 	//check
 	checkErr := "owner.servers :No parser for type []flaeg.ServerInfo"
 	if err == nil || !strings.Contains(err.Error(), checkErr) {
 		t.Errorf("Expexted error %s\ngot %s", checkErr, err)
 	}
+	//check continue on error
+	stringParser.SetValue("CONTINUE")
+	checkLoglevel := &stringParser
+	if !reflect.DeepEqual(valmap["loglevel"], checkLoglevel) {
+		t.Fatalf("Got %s expected %s\n", valmap["loglevel"], checkLoglevel)
+	}
+
 }
 
 //Test getDefaultValue on a full complex struct, with annonymous field, and not nil pointers
@@ -1590,6 +1597,19 @@ func TestLoadInitConfigAllDefaultSomeFlagErrorParser(t *testing.T) {
 	checkErr := "owner.servers :No parser for type []flaeg.ServerInfo"
 	if err == nil || !strings.Contains(err.Error(), checkErr) {
 		t.Errorf("Expexted error %s\ngot %s", checkErr, err)
+	}
+	//check contunue on error
+	check := newConfiguration()
+	check.LogLevel = "INFO"
+	check.Db = newDefaultPointersConfiguration().Db
+	check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
+	check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+
+	if !reflect.DeepEqual(config, check) {
+		if !reflect.DeepEqual(config.Owner, check.Owner) {
+			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+		}
+		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
