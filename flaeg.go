@@ -145,7 +145,8 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 		}
 	}
 
-	// Call custom helper
+	// prevents case sensitivity issue
+	args = argsToLower(args)
 	if err := flagSet.Parse(args); err != nil {
 		return nil, err
 	}
@@ -751,4 +752,35 @@ func isExported(fieldName string) bool {
 		return true
 	}
 	return false
+}
+
+func argToLower(inArg string) string {
+	var outArg string
+	dashIndex := strings.Index(inArg, "--")
+	if dashIndex == -1 {
+		if dashIndex = strings.Index(inArg, "-"); dashIndex == -1 {
+			return inArg
+		}
+		//-fValue
+		outArg = strings.ToLower(inArg[dashIndex:dashIndex+2]) + inArg[dashIndex+2:]
+		return outArg
+	}
+	//--flag
+	if equalIndex := strings.Index(inArg, "="); equalIndex != -1 {
+		//--flag=value
+		outArg = strings.ToLower(inArg[dashIndex:equalIndex]) + inArg[equalIndex:]
+	} else {
+		//--boolflag
+		outArg = strings.ToLower(inArg[dashIndex:])
+	}
+
+	return outArg
+}
+
+func argsToLower(inArgs []string) []string {
+	outArgs := make([]string, len(inArgs), len(inArgs))
+	for i, inArg := range inArgs {
+		outArgs[i] = argToLower(inArg)
+	}
+	return outArgs
 }

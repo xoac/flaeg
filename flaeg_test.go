@@ -2499,3 +2499,50 @@ func TestIsExported(t *testing.T) {
 		}
 	}
 }
+
+func TestArgToLower(t *testing.T) {
+	checkTab := map[string]string{
+		"--lowerCase":       "--lowercase",
+		"-U":                "-u",
+		"--lowerCase=TaTa":  "--lowercase=TaTa",
+		"-UTaTa":            "-uTaTa",
+		" --lowerCase":      "--lowercase",
+		"  -U":              "-u",
+		" --lowerCase=TaTa": "--lowercase=TaTa",
+		"    -UTaTa":        "-uTaTa",
+		"notAFlag":          "notAFlag",
+	}
+	for inArg, check := range checkTab {
+		if outArg := argToLower(inArg); outArg != check {
+			t.Errorf("inArg %s, Expected outArg %s got %s", inArg, check, outArg)
+		}
+	}
+}
+func TestArgsToLower(t *testing.T) {
+	inArgs := []string{
+		"--lowerCase",
+		"-U",
+		"--lowerCase=TaTa",
+		"-uTaTa",
+		" --lowerCase",
+		"  -U",
+		" --lowerCase=TaTa",
+		"    -UTaTa",
+		"notAFlag",
+	}
+	check := []string{
+		"--lowercase",
+		"-u",
+		"--lowercase=TaTa",
+		"-uTaTa",
+		"--lowercase",
+		"-u",
+		"--lowercase=TaTa",
+		"-uTaTa",
+		"notAFlag",
+	}
+	if outArgs := argsToLower(inArgs); !reflect.DeepEqual(outArgs, check) {
+		t.Errorf("Expected outArgs %s got %s", check, outArgs)
+	}
+
+}
