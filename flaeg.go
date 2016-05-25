@@ -755,6 +755,9 @@ func isExported(fieldName string) bool {
 }
 
 func argToLower(inArg string) string {
+	if len(inArg) < 2 {
+		return strings.ToLower(inArg)
+	}
 	var outArg string
 	dashIndex := strings.Index(inArg, "--")
 	if dashIndex == -1 {

@@ -2035,6 +2035,70 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 }
 
 //Test Commands feature with root and version commands
+func TestSeveralCommandsDashArg(t *testing.T) {
+	//INIT
+	//init root config
+	rootConfig := newConfiguration()
+	//init root default pointers
+	rootDefaultPointers := newDefaultPointersConfiguration()
+	//init version config
+	versionConfig := &VersionConfig{"0.1"}
+
+	//init args
+	args := []string{
+		"-", //dash arg
+	}
+
+	//init commands
+	//root command
+	rootCmd := &Command{
+		Name: "flaegtest",
+		Description: `flaegtest is a test program made to to test flaeg library.
+Complete documentation is available at https://github.com/containous/flaeg`,
+
+		Config:                rootConfig,
+		DefaultPointersConfig: rootDefaultPointers,
+		//test in run
+		Run: func() error {
+			// fmt.Printf("Run with config :\n%+v\n", rootConfig)
+			//CHECK
+			check := newConfiguration()
+
+			if !reflect.DeepEqual(rootConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+			}
+			return nil
+		},
+	}
+	//vesion command
+	VersionConfig := &Command{
+		Name:        "version",
+		Description: `Print version`,
+
+		Config:                versionConfig,
+		DefaultPointersConfig: versionConfig,
+		//test in run
+		Run: func() error {
+			fmt.Printf("Version %s \n", versionConfig.Version)
+			return nil
+		},
+	}
+
+	//TEST
+	//init flaeg
+	flaeg := New(rootCmd, args)
+	//add custom parser to fleag
+	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	//add command Version
+	flaeg.AddCommand(VersionConfig)
+
+	//run test
+	if err := flaeg.Run(); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+}
+
+//Test Commands feature with root and version commands
 func TestCommandVersionInitConfigNoDefaultRootCommandHelpFlag(t *testing.T) {
 	//INIT
 	//init root config
@@ -2502,15 +2566,18 @@ func TestIsExported(t *testing.T) {
 
 func TestArgToLower(t *testing.T) {
 	checkTab := map[string]string{
-		"--lowerCase":       "--lowercase",
+		"--lowercase":       "--lowercase",
 		"-U":                "-u",
-		"--lowerCase=TaTa":  "--lowercase=TaTa",
+		"--CamelCase=TaTa":  "--camelcase=TaTa",
 		"-UTaTa":            "-uTaTa",
-		" --lowerCase":      "--lowercase",
+		" --UPPERCASE":      "--uppercase",
 		"  -U":              "-u",
 		" --lowerCase=TaTa": "--lowercase=TaTa",
 		"    -UTaTa":        "-uTaTa",
 		"notAFlag":          "notAFlag",
+		"-":                 "-",
+		"--":                "--",
+		"--A":               "--a",
 	}
 	for inArg, check := range checkTab {
 		if outArg := argToLower(inArg); outArg != check {
@@ -2518,6 +2585,7 @@ func TestArgToLower(t *testing.T) {
 		}
 	}
 }
+
 func TestArgsToLower(t *testing.T) {
 	inArgs := []string{
 		"--lowerCase",
