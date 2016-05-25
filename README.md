@@ -1,35 +1,9 @@
-
-```AsciiDoc
-FFFFFFFFFFFFFFFFFFF lllll                                              
-F:::::::::::::::::F l:::l                                              
-F:::::::::::::::::F l:::l                                              
-FF:::FFFFFFFFF::::F l:::l                                              
-  F::F       FFFFFF  l::l    æææææææææææ    ææææææææ       gggggg  gggg
-  F::F               l::l    æ::::::::::æ  æ::::::::æ     g::::::gg:::g
-  F:::FFFFFFFFFF     l::l    ææææææææ:::::æ:::ææææ:::ææ  g::::::::::::g
-  F::::::::::::F     l::l            æ:::æ:::æ    æ:::æ g::::gggg::::gg
-  F::::::::::::F     l::l     æææææææ::::æ::::ææææ::::æ g:::g    g:::g 
-  F:::FFFFFFFFFF     l::l    æ:::::::::::æ:::::::::::æ  g:::g    g:::g 
-  F::F               l::l   æ:::ææææ:::::æ:::ææææææææ   g:::g    g:::g 
-  F::F               l::l  æ:::æ    æ::::æ::::æ         g::::g   g:::g 
-FF::::FF            l::::l æ:::æ    æ::::æ:::::æ        g:::::gggg:::g 
-F:::::FF            l::::l æ::::ææææ:::::æ::::::æææææ    g:::::::::::g 
-F:::::FF            l::::l  æ::::::::::æ   æ::::::::æ     g::::::::::g 
-FFFFFFFF            llllll   ææææææææææ     æææææææææ      gggggg::::g 
-                                                                 g:::g 
-                                                        gggg     g:::g 
-                                                        g:::gg  gg:::g 
-                                                         g::::gg:::::g 
-                                                          g:::::::::g  
-                                                           gg:::::gg   
-                                                             ggggg   
-```
-
+# Flæg
 [![Travis branch](https://img.shields.io/travis/containous/flaeg/master.svg)](https://travis-ci.org/containous/flaeg)
 [![Coverage Status](https://coveralls.io/repos/github/containous/flaeg/badge.svg?branch=master)](https://coveralls.io/github/containous/flaeg?branch=master)
 [![license](https://img.shields.io/github/license/containous/flaeg.svg)](https://github.com/containous/flaeg/blob/master/LICENSE.md)
 
-Flaeg is a Go library for building dynamically a powerful modern Command Line Interface and loading a program configuration structure from arguments.
+Flæg is a Go library for building dynamically a powerful modern Command Line Interface and loading a program configuration structure from arguments.
 Go developers don't need to worry about keeping flags and commands updated anymore : it works by itself !
 
 ## Overview
