@@ -10,6 +10,7 @@ Go developers don't need to worry about keeping flags and commands updated anymo
 You know how boring it is to keep your CLI up-to-date. You will be glad to use Flaeg ;-)
 This package uses your own configuration structure to build your CLI. 
 You only need to describe every `StructField` with a `StructTag`,  flaeg will automatically build the CLI, parse data from args, and load Go values into Configuration structure via reflection !
+We developed `flaeg` and [`staert`](https://github.com/containous/staert) in order to simplify configuration maintenance on [traefik](https://github.com/containous/traefik).
 
 ## Features
  - Load your Configuration structure with program args
