@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-//TODO https://github.com/golang/go/wiki/TableDrivenTests
-
 //Configuration is a struct which contains all differents type to field
 //using parsers on string, time.Duration, pointer, bool, int, int64, time.Time, float64
 type Configuration struct {
@@ -1826,7 +1824,7 @@ func TestCommandVersionInitConfigNoDefaultNoFlag(t *testing.T) {
 
 	//init args
 	args := []string{
-		"--toto",  //no effect
+		// "--toto",  //it now has effect
 		"version", //call Command
 		// "-v0.2",
 	}
@@ -1901,7 +1899,7 @@ func TestCommandVersionInitConfigNoDefaultAllFlag(t *testing.T) {
 
 	//init args
 	args := []string{
-		"--toto",  //no effect
+		// "--toto",  //it now has effect
 		"version", //call Command
 		"-v2.2beta",
 	}
@@ -1976,7 +1974,7 @@ func TestCommandVersionInitConfigNoDefaultCommandHelpFlag(t *testing.T) {
 
 	//init args
 	args := []string{
-		"--toto",  //no effect
+		// "--toto",  //it now has effect
 		"version", //call Command
 		"-h",
 	}
@@ -2167,78 +2165,6 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 }
 
 //Test Commands feature with root and version commands
-func TestCommandVersionManyCommandsCalled(t *testing.T) {
-	//INIT
-	//init root config
-	rootConfig := newConfiguration()
-	//init root default pointers
-	rootDefaultPointers := newDefaultPointersConfiguration()
-	//init version config
-	versionConfig := &VersionConfig{"0.1"}
-
-	//init args
-	args := []string{
-		"--toto",   //no effect
-		"command1", //call Command
-		"--flag1",
-		"command2", //call Command
-		"--flag2",
-	}
-
-	//init commands
-	//root command
-	rootCmd := &Command{
-		Name: "flaegtest",
-		Description: `flaegtest is a test program made to to test flaeg library.
-Complete documentation is available at https://github.com/containous/flaeg`,
-
-		Config:                rootConfig,
-		DefaultPointersConfig: rootDefaultPointers,
-		//test in run
-		Run: func() error {
-			fmt.Printf("Run with config :\n%+v\n", rootConfig)
-			//CHECK
-			check := newConfiguration()
-			check.LogLevel = "INFO"
-			check.Db = newDefaultPointersConfiguration().Db
-			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
-			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
-
-			if !reflect.DeepEqual(rootConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
-			}
-			return nil
-		},
-	}
-	//vesion command
-	VersionConfig := &Command{
-		Name:        "version",
-		Description: `Print version`,
-
-		Config:                versionConfig,
-		DefaultPointersConfig: versionConfig,
-		//test in run
-		Run: func() error {
-			fmt.Printf("Version %s \n", versionConfig.Version)
-			return nil
-		},
-	}
-
-	//TEST
-	//init flaeg
-	flaeg := New(rootCmd, args)
-	//add custom parser to fleag
-	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
-	//add command Version
-	flaeg.AddCommand(VersionConfig)
-
-	//run test
-	if err := flaeg.Run(); err == nil || !strings.Contains(err.Error(), "many commands called") {
-		t.Errorf("Expected Error :Too many commands called got Error : %s", err)
-	}
-}
-
-//Test Commands feature with root and version commands
 func TestCommandVersionUnknownCommand(t *testing.T) {
 	//INIT
 	//init root config
@@ -2250,7 +2176,6 @@ func TestCommandVersionUnknownCommand(t *testing.T) {
 
 	//init args
 	args := []string{
-		"--toto",         //no effect
 		"unknowncommand", //call Command
 		"-h",
 	}
@@ -2320,7 +2245,7 @@ func TestParseCommandVersionInitConfigNoDefaultAllFlag(t *testing.T) {
 
 	//init args
 	args := []string{
-		"--toto",  //no effect
+		// "--toto",  //it now has effect
 		"version", //call Command
 		"-v2.2beta",
 	}
@@ -2380,18 +2305,18 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	//run test
 	cmd, err := flaeg.GetCommand()
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatalf("Error %s", err.Error())
 	}
 	result, err := flaeg.Parse(cmd)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatalf("Error %s", err.Error())
 	}
 
 	//check
 	check := &VersionConfig{"2.2beta"}
 
 	if !reflect.DeepEqual(result.Config, check) {
-		t.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, result.Config)
+		t.Fatalf("\nexpected \t%+v \ngot \t\t%+v\n", check, result.Config)
 	}
 
 }
@@ -2613,4 +2538,30 @@ func TestArgsToLower(t *testing.T) {
 		t.Errorf("Expected outArgs %s got %s", check, outArgs)
 	}
 
+}
+
+func TestSplitArgs(t *testing.T) {
+	inSlice := [][]string{
+		[]string{"-a"},
+		[]string{"--arg=toto", "-atata"},
+		[]string{"cmd"},
+		[]string{"cmd", "-a"},
+		[]string{"cmd", "--arg=toto", "-atata"},
+	}
+	checkSlice := [][]string{
+		[]string{"", "-a"},
+		[]string{"", "--arg=toto", "-atata"},
+		[]string{"cmd"},
+		[]string{"cmd", "-a"},
+		[]string{"cmd", "--arg=toto", "-atata"},
+	}
+	for i, in := range inSlice {
+		cmd, args := splitArgs(in)
+		if cmd != checkSlice[i][0] {
+			t.Errorf("Args %s, Expected cmd %s got %s", in, checkSlice[i][0], cmd)
+		}
+		if !reflect.DeepEqual(args, checkSlice[i][1:]) {
+			t.Errorf("Args %s, Expected cmdArg %s got %s", in, checkSlice[i][1:], args)
+		}
+	}
 }

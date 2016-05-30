@@ -682,7 +682,7 @@ func (f *Flaeg) AddParser(typ reflect.Type, parser Parser) {
 // Run calls the command with flags given as agruments
 func (f *Flaeg) Run() error {
 	if f.calledCommand == nil {
-		if _, err := f.GetCommand(); err != nil {
+		if _, _, err := f.findCommandWithCommandArgs(); err != nil {
 			return err
 		}
 	}
@@ -704,42 +704,44 @@ func (f *Flaeg) Parse(cmd *Command) (*Command, error) {
 	return cmd, nil
 }
 
+//splitArgs takes args (type []string) and return command ("" if rootCommand) and command's args
+func splitArgs(args []string) (string, []string) {
+	if len(args) >= 1 && string(args[0][0]) != "-" {
+		if len(args) == 1 {
+			return strings.ToLower(args[0]), []string{}
+		}
+		return strings.ToLower(args[0]), args[1:]
+	}
+	return "", args
+}
+
+// findCommandWithCommandArgs returns the called command (by reference) and command's args
+// the error returned is not nil if it fails
+func (f *Flaeg) findCommandWithCommandArgs() (*Command, []string, error) {
+	commandName := ""
+	commandName, f.commmandArgs = splitArgs(f.args)
+	if len(commandName) > 0 {
+		for _, command := range f.commands {
+			if commandName == command.Name {
+				f.calledCommand = command
+				return f.calledCommand, f.commmandArgs, nil
+			}
+		}
+		return nil, []string{}, fmt.Errorf("Command %s not found", commandName)
+	}
+
+	f.calledCommand = f.commands[0]
+	return f.calledCommand, f.commmandArgs, nil
+}
+
 // GetCommand splits args and returns the called command (by reference)
 // It returns nil and a not nil error if it fails
 func (f *Flaeg) GetCommand() (*Command, error) {
-	// split args
-	//TODO : put it in func and unit test it
-	commandName := ""
-	f.commmandArgs = f.args
-	cptCommands := 0
-	for i, arg := range f.args {
-		if string(arg[0]) != "-" {
-			//TODO case sensitivity
-			commandName = strings.ToLower(arg)
-			f.commmandArgs = f.args[i+1:]
-			cptCommands++
-		}
+	if f.calledCommand == nil {
+		_, _, err := f.findCommandWithCommandArgs()
+		return f.calledCommand, err
 	}
-	// fmt.Printf("cmdName %s, cmdArgs %s, nbCmd %d\n", commandName, commandArgs, cptCommands)
-	// check args : 0 ou 1 sous commande
-	switch cptCommands {
-	case 0:
-		//initialize Config
-		f.calledCommand = f.commands[0]
-		return f.calledCommand, nil
-	case 1:
-		//look for command
-		for _, command := range f.commands {
-			if commandName == command.Name {
-				//initialize Config
-				f.calledCommand = command
-				return f.calledCommand, nil
-			}
-		}
-		return nil, fmt.Errorf("Command %s not found", commandName)
-	default:
-		return nil, fmt.Errorf("Too many commands called, expexted 0 or 1 got %d", cptCommands)
-	}
+	return f.calledCommand, nil
 }
 
 //isExported return true is the field (from fieldName) is exported,
