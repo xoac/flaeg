@@ -719,7 +719,7 @@ func (f *Flaeg) Parse(cmd *Command) (*Command, error) {
 
 //splitArgs takes args (type []string) and return command ("" if rootCommand) and command's args
 func splitArgs(args []string) (string, []string) {
-	if len(args) >= 1 && string(args[0][0]) != "-" {
+	if len(args) >= 1 && len(args[0]) >= 1 && string(args[0][0]) != "-" {
 		if len(args) == 1 {
 			return strings.ToLower(args[0]), []string{}
 		}
