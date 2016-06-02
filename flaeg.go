@@ -72,6 +72,19 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.Struct
 	return nil
 }
 
+//GetFlags returns flags
+func GetFlags(config interface{}) ([]string, error) {
+	flagmap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
+		return []string{}, err
+	}
+	flags := make([]string, 0, len(flagmap))
+	for f := range flagmap {
+		flags = append(flags, f)
+	}
+	return flags, nil
+}
+
 //loadParsers loads default parsers and custom parsers given as parameter. Return a map [reflect.Type]parsers
 // bool, int, int64, uint, uint64, float64,
 func loadParsers(customParsers map[reflect.Type]Parser) (map[reflect.Type]Parser, error) {

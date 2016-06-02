@@ -3,6 +3,7 @@ package flaeg
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -109,6 +110,39 @@ func TestGetTypesRecursive(t *testing.T) {
 			t.Fatalf("Tag : %s, got %s expected %s\n", name, field.Type, checkType[name])
 		}
 	}
+}
+
+func TestGetFlags(t *testing.T) {
+	config := newConfiguration()
+	flags, err := GetFlags(config)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	check := []string{
+		"loglevel",
+		"timeout",
+		"db",
+		"db.watch",
+		"db.ip",
+		"db.load",
+		"db.load64",
+		"db.comax",
+		"db.connectionmax64",
+		"owner",
+		"owner.name",
+		"owner.dob",
+		"owner.rate",
+		"owner.servers",
+	}
+	if len(check) != len(flags) {
+		t.Fatalf("Error, expected %d elements in parsers got %d", len(check), len(flags))
+	}
+	sort.Strings(check)
+	sort.Strings(flags)
+	if !reflect.DeepEqual(flags, check) {
+		t.Fatalf("Got %s expected %s\n", flags, check)
+	}
+
 }
 
 //CUSTOM PARSER
