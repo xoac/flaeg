@@ -2576,6 +2576,7 @@ func TestArgsToLower(t *testing.T) {
 
 func TestSplitArgs(t *testing.T) {
 	inSlice := [][]string{
+		[]string{""},
 		[]string{"-a"},
 		[]string{"--arg=toto", "-atata"},
 		[]string{"cmd"},
@@ -2583,6 +2584,7 @@ func TestSplitArgs(t *testing.T) {
 		[]string{"cmd", "--arg=toto", "-atata"},
 	}
 	checkSlice := [][]string{
+		[]string{"", ""},
 		[]string{"", "-a"},
 		[]string{"", "--arg=toto", "-atata"},
 		[]string{"cmd"},
