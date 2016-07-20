@@ -528,6 +528,7 @@ type Command struct {
 	Config                interface{}
 	DefaultPointersConfig interface{} //TODO:case DefaultPointersConfig is nil
 	Run                   func() error
+	Metadata              map[string]string
 }
 
 //LoadWithCommand initializes config : struct fields given by reference, with args : arguments.

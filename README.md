@@ -136,7 +136,8 @@ type Command struct {
 	Description           string
 	Config                interface{}
 	DefaultPointersConfig interface{}
-	Run                   func(InitalizedConfig interface{}) error
+	Run                   func() error		
+	Metadata              map[string]string
 }
 ```
 
@@ -148,17 +149,16 @@ So, you can creat Commands like this :
     Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                config,
 		DefaultPointersConfig: defaultPointers,
-		Run: func(InitalizedConfig interface{}) error {
-      //Type assertions
-      config, ok := InitalizedConfig.(*Configuration);
-      if !ok {
-				return fmt.Errorf("Cannot convert the config into Configuration")
-			}
-			return nil
-		},
+		Run: func() error {
+				fmt.Printf("Run flaegtest command with config : %+v\n", config)
+				return nil
+			},
 ```
 
-NB : You have to create at least the root-Command, but you can add some sub-Command.
+You have to create at least the root-Command, and you can add some sub-Command.
+
+Metadata allows you to store some labels(Key-value) in the command and to use it elsewhere.
+We needed that in [Stært](https://github.com/containous/staert).
 
 ### Run Flaeg
 Let's run fleag now :
