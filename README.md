@@ -4,12 +4,12 @@
 [![license](https://img.shields.io/github/license/containous/flaeg.svg)](https://github.com/containous/flaeg/blob/master/LICENSE.md)
 
 Flæg is a Go library for building dynamically a powerful modern Command Line Interface and loading a program configuration structure from arguments.
-Go developers don't need to worry about keeping flags and commands updated anymore : it works by itself !
+Go developers don't need to worry about keeping flags and commands updated anymore: it works by itself!
 
 ## Overview
 You know how boring it is to keep your CLI up-to-date. You will be glad to use Flaeg ;-)
 This package uses your own configuration structure to build your CLI. 
-You only need to describe every `StructField` with a `StructTag`,  flaeg will automatically build the CLI, parse data from args, and load Go values into Configuration structure via reflection !
+You only need to describe every `StructField` with a `StructTag`,  flaeg will automatically build the CLI, parse data from args, and load Go values into Configuration structure via reflection!
 We developed `flaeg` and [`staert`](https://github.com/containous/staert) in order to simplify configuration maintenance on [traefik](https://github.com/containous/traefik).
 
 ## Features
@@ -48,7 +48,7 @@ $ go get github.com/containous/flaeg
 
 ### Configuration Structures
 Flaeg works on any kind of structure, you only need to add a `StructTag` "description" on the fields to flag.
-Like this :
+Like this:
 
 ```go
 //Configuration is a struct which contains all differents type to field
@@ -62,7 +62,7 @@ type Configuration struct {
 }
 ```
 
-You can add sub-structures even if they are anonymous :
+You can add sub-structures even if they are anonymous:
 
 ```go
 type ServerInfo struct {
@@ -88,8 +88,8 @@ type OwnerInfo struct {
 Flaeg is POSIX compliant using [pflag](https://github.com/ogier/pflag) package.
 Flaeg concats the names of fields to generate the flags. They are not case sensitive. 
 For example, the field `ConnectionMax64` in `OwnerInfo` sub-Structure which is in `Configuration` Structure will be `--db.connectionmax64`.
-But you can overwrite it with the `StructTag` `long` as like as the field `ConnectionMax` which is flagged `--db.comax`
-Finally, you can add a short flag (1 character) using the `StructTag` `short`, like in the field `LogLevel` with the short flags `-l` in addition to the flag`--loglevel`
+But you can overwrite it with the `StructTag` `long` as like as the field `ConnectionMax` which is flagged `--db.comax`.
+Finally, you can add a short flag (1 character) using the `StructTag` `short`, like in the field `LogLevel` with the short flags `-l` in addition to the flag`--loglevel`.
 
 ### Default values
 Default values on fields come from the configuration structure. If it was not initialized, Golang default values are used.
@@ -99,7 +99,7 @@ For pointers, the `DefaultPointers` structure provides default values.
 The help is auto-generated using the `description` `StructTag` and default value from configuration structure.
 Flag `--help` and short flag `-h` are bound to call the helper.
 If the args parser fails, it will print the error and the helper will be call as well.
-Here an example :
+Here an example:
 
 ```
 Usage: flaeg.test [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
@@ -124,11 +124,11 @@ Flags:
 ```
 
 ### Command
-The `Command` structure contains program/command information (command name and description)
-`Config` must be a pointer on the configuration struct to parse (it contains default values of field)
+The `Command` structure contains program/command information (command name and description).
+`Config` must be a pointer on the configuration struct to parse (it contains default values of field).
 `DefaultPointersConfig` contains default pointers values: those values are set on pointers fields if their flags are called.
-It must be the same type(struct) as `Config`
-`Run` is the func which launch the program using initialized configuration structure
+It must be the same type (struct) as `Config`.
+`Run` is the func which launch the program using initialized configuration structure.
 
 ```go
 type Command struct {
@@ -141,7 +141,7 @@ type Command struct {
 }
 ```
 
-So, you can creat Commands like this :
+So, you can create Commands like this:
 ```go
 	rootCmd := &Command{
 		Name: "flaegtest",
@@ -161,7 +161,7 @@ Metadata allows you to store some labels(Key-value) in the command and to use it
 We needed that in [Stært](https://github.com/containous/staert).
 
 ### Run Flaeg
-Let's run fleag now :
+Let's run fleag now:
 `rootCmd` is the root-Command
 `versionCmd` is a sub-Command
 
@@ -179,20 +179,20 @@ Let's run fleag now :
 ```
 
 ### Custom Parsers
-The function `flaeg.AddParser` adds a custom parser for a specified type
+The function `flaeg.AddParser` adds a custom parser for a specified type.
 
 ```go
 func (f *Flaeg) AddParser(typ reflect.Type, parser Parser)
 ```
 
-It can be used like this :
+It can be used like this:
 
 ```go
 //add custom parser to fleag
 flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
 ```
 
-`sliceServerValue{}` need to implement `flaeg.Parser` :
+`sliceServerValue{}` need to implement `flaeg.Parser`:
 
 ```go
 type Parser interface {
@@ -201,7 +201,7 @@ type Parser interface {
 }
 ```
 
-like this :
+like this:
 
 ```go
 type sliceServerValue []ServerInfo
