@@ -95,34 +95,6 @@ Finally, you can add a short flag (1 character) using the `StructTag` `short`, l
 Default values on fields come from the configuration structure. If it was not initialized, Golang default values are used.
 For pointers, the `DefaultPointers` structure provides default values.
 
-### Help
-The help is auto-generated using the `description` `StructTag` and default value from configuration structure.
-Flag `--help` and short flag `-h` are bound to call the helper.
-If the args parser fails, it will print the error and the helper will be call as well.
-Here an example:
-
-```
-Usage: flaeg.test [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
-   or: flaeg.test [--flag[=true|false| ]] [-f[true|false| ]] ...     set true/false to boolean flag(s)   
-
-Flags:
-	--db                                               Enable database (default "false")
-	--db.comax                                         Number max of connections on database (default "3200000000")
-	--db.connectionmax64                               Number max of connections on database (default "6400000000000000000")
-	--db.ip                                            Server ip address (default "192.168.1.2")
-	--db.load                                          Server load (default "32")
-	--db.load64                                        Server load (default "64")
-	--db.watch                                         Watch device (default "true")
-	-l, --loglevel                                     Log level (default "DEBUG")
-	--owner                                            Enable Owner description (default "true")
-	--owner.dob                                        Owner date of birth (default "1993-09-12 07:32:00 +0000 UTC")
-	--owner.name                                       Owner name (default "true")
-	--owner.rate                                       Owner rate (default "0.999")
-	--owner.servers                                    Owner Server (default "[]")
-	--timeout                                          Timeout duration (default "1s")
-	-h, -help                                          Print Help (this message) and exit
-```
-
 ### Command
 The `Command` structure contains program/command information (command name and description).
 `Config` must be a pointer on the configuration struct to parse (it contains default values of field).
@@ -159,6 +131,43 @@ You have to create at least the root-Command, and you can add some sub-Command.
 
 Metadata allows you to store some labels(Key-value) in the command and to use it elsewhere.
 We needed that in [Stært](https://github.com/containous/staert).
+
+### Help
+The responsive help is auto-generated using the `description` `StructTag`, default value from configuration structure and/or `Command` structure.
+Flag `--help` and short flag `-h` are bound to call the helper.
+If the args parser fails, it will print the error and the helper will be call as well.
+Here an example:
+
+```
+$./flaegtest --help
+flaegtest is a test program made to test flaeg library.
+Complete documentation is available at https://github.com/containous/flaeg
+	
+Usage: flaegtest [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
+   or: flaegtest [--flag[=true|false| ]] [-f[true|false| ]] ...     set true/false to boolean flag(s)
+
+Available Commands:
+	version                                            Print version
+Use "flaegtest [command] --help" for more information about a command.
+
+Flags:
+    --db                 Enable database                       (default "false")
+    --db.comax           Number max of connections on database (default "3200000000")
+    --db.connectionmax64 Number max of connections on database (default "6400000000000000000")
+    --db.ip              Server ip address                     (default "192.168.1.2")
+    --db.load            Server load                           (default "32")
+    --db.load64          Server load                           (default "64")
+    --db.watch           Watch device                          (default "true")
+-l, --loglevel           Log level                             (default "DEBUG")
+    --owner              Enable Owner description              (default "true")
+    --owner.dob          Owner date of birth                   (default "1993-09-12 07:32:00 +0000 UTC")
+    --owner.name         Owner name                            (default "true")
+    --owner.rate         Owner rate                            (default "0.999")
+    --owner.servers      Owner Server                          (default "[]")
+    --timeout            Timeout duration                      (default "1s")
+-h, --help               Print Help (this message) and exit
+```
+
 
 ### Run Flaeg
 Let's run fleag now:

@@ -2,6 +2,8 @@ package flaeg
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -676,9 +678,8 @@ func TestParseArgsErrorNoParser(t *testing.T) {
 	//test
 	valmap, err := parseArgs(args, flagmap, parsers)
 	//check
-	checkErr := "owner.servers :No parser for type []flaeg.ServerInfo"
-	if err == nil || !strings.Contains(err.Error(), checkErr) {
-		t.Errorf("Expexted error %s\ngot %s", checkErr, err)
+	if err != ErrParserNotFound {
+		t.Errorf("Expexted error %s\ngot %s", ErrParserNotFound, err)
 	}
 	//check continue on error
 	stringParser.SetValue("CONTINUE")
@@ -1622,14 +1623,21 @@ func TestLoadInitConfigAllDefaultSomeFlagErrorParser(t *testing.T) {
 		"--owner.dob=2016-04-20T17:39:00Z",
 	}
 
+	// catch stdout
+	rescueStdout := os.Stdout
+	_, w, _ := os.Pipe()
+	os.Stdout = w
+
 	//TEST
 	err := Load(config, defaultPointers, args)
-
-	//check
-	checkErr := "owner.servers :No parser for type []flaeg.ServerInfo"
-	if err == nil || !strings.Contains(err.Error(), checkErr) {
-		t.Errorf("Expexted error %s\ngot %s", checkErr, err)
+	if err != ErrParserNotFound {
+		t.Errorf("Expexted error %s\ngot %s", ErrParserNotFound, err)
 	}
+
+	// read and restore stdout
+	w.Close()
+	os.Stdout = rescueStdout
+
 	//check contunue on error
 	check := newConfiguration()
 	check.LogLevel = "INFO"
@@ -1679,8 +1687,10 @@ func TestParseArgsInvalidArgument(t *testing.T) {
 	args := []string{
 		"--timeout=ItsAnError",
 	}
+
 	//Test
-	if _, err := parseArgs(args, flagmap, parsers); err == nil || !strings.Contains(err.Error(), "invalid argument") {
+	checkErr := "invalid argument"
+	if _, err := parseArgs(args, flagmap, parsers); err == nil || !strings.Contains(err.Error(), checkErr) {
 		t.Errorf("Expected Error : invalid argument got Error : %s", err)
 	}
 }
@@ -1779,13 +1789,31 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 		"owner.rate":         reflect.ValueOf(float64(0.999)),
 		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
 	}
+
+	// catch stdout
+	rescueStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
 	//Test
+	checkErr := "invalid argument"
 	_, err := parseArgs(args, flagmap, parsers)
-	if err != nil && strings.Contains(err.Error(), "invalid argument") {
+	if err != nil && strings.Contains(err.Error(), checkErr) {
 		PrintError(err, flagmap, defaultValmap, parsers)
 	} else {
 		t.Errorf("Expected Error : invalid argument got Error : %s", err)
 	}
+
+	// read and restore stdout
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = rescueStdout
+
+	//check
+	if !strings.Contains(string(out), checkErr) {
+		t.Errorf("Expexted error %s\ngot %s", checkErr, out)
+	}
+
 }
 
 //Test Commands feature with only the root command
@@ -1814,7 +1842,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		DefaultPointersConfig: defaultPointers,
 		//test in run
 		Run: func() error {
-			fmt.Printf("Run with config :\n%+v\n", config)
+			// fmt.Printf("Run with config :\n%+v\n", config)
 			//CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
@@ -1897,7 +1925,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		DefaultPointersConfig: versionConfig,
 		//test in run
 		Run: func() error {
-			fmt.Printf("Version %s \n", versionConfig.Version)
+			// fmt.Printf("Version %s \n", versionConfig.Version)
 			//CHECK
 			if versionConfig.Version != "0.1" {
 				return fmt.Errorf("expected 0.1 got %s", versionConfig.Version)
@@ -1972,7 +2000,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		DefaultPointersConfig: versionConfig,
 		//test in run
 		Run: func() error {
-			fmt.Printf("Version %s \n", versionConfig.Version)
+			// fmt.Printf("Version %s \n", versionConfig.Version)
 			//CHECK
 			if versionConfig.Version != "2.2beta" {
 				return fmt.Errorf("expected 2.2beta got %s", versionConfig.Version)
@@ -2060,10 +2088,20 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	//add command Version
 	flaeg.AddCommand(VersionConfig)
 
+	// catch stdout
+	rescueStdout := os.Stdout
+	_, w, _ := os.Pipe()
+	os.Stdout = w
+
+	checkErr := "help requested"
 	//run test
-	if err := flaeg.Run(); err == nil || !strings.Contains(err.Error(), "help requested") {
+	if err := flaeg.Run(); err == nil || !strings.Contains(err.Error(), checkErr) {
 		t.Errorf("Expected Error :help requested got Error : %s", err)
 	}
+
+	// read and restore stdout
+	w.Close()
+	os.Stdout = rescueStdout
 }
 
 //Test Commands feature with root and version commands
@@ -2149,7 +2187,7 @@ func TestCommandVersionInitConfigNoDefaultRootCommandHelpFlag(t *testing.T) {
 	//root command
 	rootCmd := &Command{
 		Name: "flaegtest",
-		Description: `flaegtest is a test program made to to test flaeg library.
+		Description: `flaegtest is a test program made to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
 
 		Config:                rootConfig,
@@ -2192,9 +2230,23 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	//add command Version
 	flaeg.AddCommand(VersionConfig)
 
+	// catch stdout
+	rescueStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
 	//run test
 	if err := flaeg.Run(); err == nil || !strings.Contains(err.Error(), "help requested") {
 		t.Errorf("Expected Error :help requested got Error : %s", err)
+	}
+
+	// read and restore stdout
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = rescueStdout
+
+	if !strings.Contains(string(out), "flaegtest is a test program made to test flaeg library") {
+		t.Fatalf("Expexted root command help")
 	}
 }
 
@@ -2599,5 +2651,43 @@ func TestSplitArgs(t *testing.T) {
 		if !reflect.DeepEqual(args, checkSlice[i][1:]) {
 			t.Errorf("Args %s, Expected cmdArg %s got %s", in, checkSlice[i][1:], args)
 		}
+	}
+}
+
+func TestTypoPrintHelp(t *testing.T) {
+	//init
+	config := &struct {
+		ShortDescription                                                     string `description:"shortDescription"`
+		LoooooooooooooooooooooooooooooooooooooongFieldNameAndLongDescription string `description:"LoooooooooooooooooooooooooooooooooooooongFieldNameAndLongDescription has a very looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong description"`
+		Sh                                                                   string `description:"short"`
+	}{}
+	flagmap := make(map[string]reflect.StructField)
+	err := getTypesRecursive(reflect.ValueOf(config), flagmap, "")
+	if err != nil {
+		t.Fatalf("Error, %s", err.Error())
+	}
+	var stringParser stringValue
+	parsers := map[reflect.Type]Parser{
+		reflect.TypeOf(""): &stringParser,
+	}
+	defaultValmap := map[string]reflect.Value{}
+	getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(config), defaultValmap, "")
+
+	// catch stdout
+	rescueStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	//test
+	PrintHelp(flagmap, defaultValmap, parsers)
+
+	// read and restore stdout
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = rescueStdout
+	//check
+	const listFlagCheck = `LoooooooooooooooooooooooooooooooooooooongFieldNameAndLongDescription has a very looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong description`
+
+	if strings.Contains(string(out), listFlagCheck) {
+		t.Fatalf("Expexted help description splitted on many line")
 	}
 }

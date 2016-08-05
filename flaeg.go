@@ -4,15 +4,20 @@ import (
 	"errors"
 	"fmt"
 	flag "github.com/ogier/pflag"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"reflect"
 	"sort"
 	"strings"
+	"text/tabwriter"
 	"text/template"
 	"time"
 )
+
+// ErrParserNotFound is thrown when a field is flaged but not parser match its type
+var ErrParserNotFound = errors.New("Parser not found or custom parser missing")
 
 // GetTypesRecursive links in flagmap a flag with its reflect.StructField
 // You can whether provide objValue on a structure or a pointer to structure as first argument
@@ -137,7 +142,7 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 	flagSet := flag.NewFlagSet("flaeg.Load", flag.ContinueOnError)
 	//Disable output
 	flagSet.SetOutput(ioutil.Discard)
-	var errMissingParser error
+	var err error
 	for flag, structField := range flagmap {
 		//for _, flag := range flags {
 		//structField := flagmap[flag]
@@ -153,8 +158,7 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 			}
 			newParsers[flag] = newparser
 		} else {
-			errMissingParser = fmt.Errorf("%s :No parser for type %s", flag, structField.Type)
-			// return nil, fmt.Errorf("%s :No parser for type %s", flag, structField.Type)
+			err = ErrParserNotFound
 		}
 	}
 
@@ -171,7 +175,7 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 		valmap[flag.Name] = newParsers[flag.Name]
 	}
 
-	return valmap, errMissingParser
+	return valmap, err
 }
 
 func getDefaultValue(defaultValue reflect.Value, defaultPointersValue reflect.Value, defaultValmap map[string]reflect.Value, key string) error {
@@ -370,77 +374,7 @@ func setFields(fieldValue reflect.Value, val Parser) error {
 
 //PrintHelp generates and prints command line help
 func PrintHelp(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser) error {
-	// Define a templates
-	// Using POSXE STD : http://pubs.opengroup.org/onlinepubs/9699919799/
-	const helper = `
-Usage: {{.ProgName}} [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
-   or: {{.ProgName}} [--flag[=true|false| ]] [-f[true|false| ]] ...     set true/false to boolean flag(s)   
-
-Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$defaultValues := index $.DefaultValues $j}}
-{{printf "\t%-50s %s (default \"%s\")" $flag $description $defaultValues}}{{end}}`
-
-	// Preprocess data
-
-	// Sort alphabetically & Delete unparsable flags in a slice
-	flags := []string{}
-	for flag, field := range flagmap {
-		if _, ok := parsers[field.Type]; ok {
-			flags = append(flags, flag)
-		}
-	}
-	sort.Strings(flags)
-
-	// Process data
-	printDescriptions := []string{}
-	printDefaultValues := []string{}
-	printFlags := []string{}
-	for _, flag := range flags {
-		field := flagmap[flag]
-		if short := field.Tag.Get("short"); len(short) == 1 {
-			printFlags = append(printFlags, "-"+short+", --"+flag)
-		} else {
-			printFlags = append(printFlags, "--"+flag)
-		}
-		printDescriptions = append(printDescriptions, field.Tag.Get("description"))
-		//flag on pointer ?
-		if defVal, ok := defaultValmap[flag]; ok {
-			if defVal.Kind() != reflect.Ptr {
-				// Set defaultValue on parsers
-				parsers[field.Type].SetValue(defaultValmap[flag].Interface())
-			}
-			printDefaultValues = append(printDefaultValues, parsers[field.Type].String())
-		} /*else {
-			printDefaultValues = append(printDefaultValues, "N/A")
-		}*/
-	}
-
-	// Use a struct to give data to template
-	type TempStruct struct {
-		ProgName      string
-		Flags         []string
-		Descriptions  []string
-		DefaultValues []string
-	}
-	tempStruct := TempStruct{
-		Flags:         printFlags,
-		Descriptions:  printDescriptions,
-		DefaultValues: printDefaultValues,
-	}
-	_, tempStruct.ProgName = path.Split(os.Args[0])
-
-	//Run Template
-	tmplHelper, err := template.New("helper").Parse(helper)
-	if err != nil {
-		return err
-	}
-	err = tmplHelper.Execute(os.Stdout, tempStruct)
-	if err != nil {
-		return err
-	}
-	//And footer
-	//FIXME --help ?
-	fmt.Fprintf(os.Stdout, "\n\t%-50s %s\n", "-h, --help", "Print Help (this message) and exit")
-	return nil
+	return PrintHelpWithCommand(flagmap, defaultValmap, parsers, nil, nil)
 }
 
 //PrintError takes a not nil error and prints command line help
@@ -457,64 +391,18 @@ func PrintError(err error, flagmap map[string]reflect.StructField, defaultValmap
 //LoadWithParsers initializes config : struct fields given by reference, with args : arguments.
 //Some custom parsers may be given.
 func LoadWithParsers(config interface{}, defaultValue interface{}, args []string, customParsers map[reflect.Type]Parser) error {
-	parsers, err := loadParsers(customParsers)
-	if err != nil {
-		return err
+	cmd := &Command{
+		Config:                config,
+		DefaultPointersConfig: defaultValue,
 	}
-
-	// for typ, parser := range parsers {
-	// 	fmt.Printf("%s : %+v\n", typ.Name(), parser)
-	// }
-
-	tagsmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), tagsmap, ""); err != nil {
-		return err
-	}
-	defaultValmap := make(map[string]reflect.Value)
-	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defaultValue), defaultValmap, ""); err != nil {
-		return err
-	}
-	// for flag := range defaultValmap {
-	// 	fmt.Println(flag)
-	// }
-	valmap, err := parseArgs(args, tagsmap, parsers)
-	if err != nil {
-		return PrintError(err, tagsmap, defaultValmap, parsers)
-	}
-	// for flag, val := range valmap {
-	// 	fmt.Printf("%s : %+s (default : %+v)\n", flag, val, defaultValmap[flag])
-	// }
-	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
-		return err
-	}
-
-	return nil
+	_, cmd.Name = path.Split(os.Args[0])
+	return LoadWithCommand(cmd, args, customParsers, nil)
 }
 
 //Load initializes config : struct fields given by reference, with args : arguments.
 //Some custom parsers may be given.
 func Load(config interface{}, defaultValue interface{}, args []string) error {
-	parsers, err := loadParsers(nil)
-	if err != nil {
-		return err
-	}
-	tagsmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), tagsmap, ""); err != nil {
-		return err
-	}
-	defaultValmap := make(map[string]reflect.Value)
-	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defaultValue), defaultValmap, ""); err != nil {
-		return err
-	}
-	valmap, errParseArgs := parseArgs(args, tagsmap, parsers)
-	if errParseArgs != nil && !strings.Contains(errParseArgs.Error(), "No parser for type") {
-		return PrintError(errParseArgs, tagsmap, defaultValmap, parsers)
-	}
-	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
-		return err
-	}
-
-	return errParseArgs
+	return LoadWithParsers(config, defaultValue, args, nil)
 }
 
 // Command structure contains program/command information (command name and description)
@@ -549,13 +437,17 @@ func LoadWithCommand(cmd *Command, cmdArgs []string, customParsers map[reflect.T
 		return err
 	}
 
-	valmap, err := parseArgs(cmdArgs, tagsmap, parsers)
-	if err != nil {
-		return PrintErrorWithCommand(err, tagsmap, defaultValmap, parsers, cmd, subCommand)
+	valmap, errParseArgs := parseArgs(cmdArgs, tagsmap, parsers)
+	if errParseArgs != nil && errParseArgs != ErrParserNotFound {
+		return PrintErrorWithCommand(errParseArgs, tagsmap, defaultValmap, parsers, cmd, subCommand)
 	}
 
 	if err := fillStructRecursive(reflect.ValueOf(cmd.Config), defaultValmap, valmap, ""); err != nil {
 		return err
+	}
+
+	if errParseArgs == ErrParserNotFound {
+		return errParseArgs
 	}
 
 	return nil
@@ -565,67 +457,24 @@ func LoadWithCommand(cmd *Command, cmdArgs []string, customParsers map[reflect.T
 func PrintHelpWithCommand(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser, cmd *Command, subCmd []*Command) error {
 	// Define a templates
 	// Using POSXE STD : http://pubs.opengroup.org/onlinepubs/9699919799/
-	const helper = `{{.ProgDescription}}
+	const helper = `{{if .ProgDescription}}{{.ProgDescription}}
 	
-Usage: {{.ProgName}} [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
+{{end}}Usage: {{.ProgName}} [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
    or: {{.ProgName}} [--flag[=true|false| ]] [-f[true|false| ]] ...     set true/false to boolean flag(s)
 {{if .SubCommands}}
 Available Commands:{{range $subCmdName, $subCmdDesc := .SubCommands}}
 {{printf "\t%-50s %s" $subCmdName $subCmdDesc}}{{end}}
 Use "{{.ProgName}} [command] --help" for more information about a command.
 {{end}}
-Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$defaultValues := index $.DefaultValues $j}}
-{{printf "\t%-50s %s (default \"%s\")" $flag $description $defaultValues}}{{end}}`
-
-	// Preprocess data
-
-	// Sort alphabetically & Delete unparsable flags in a slice
-	flags := []string{}
-	for flag, field := range flagmap {
-		if _, ok := parsers[field.Type]; ok {
-			flags = append(flags, flag)
-		}
-	}
-	sort.Strings(flags)
-
-	// Process data
-	printDescriptions := []string{}
-	printDefaultValues := []string{}
-	printFlags := []string{}
-	for _, flag := range flags {
-		field := flagmap[flag]
-		if short := field.Tag.Get("short"); len(short) == 1 {
-			printFlags = append(printFlags, "-"+short+", --"+flag)
-		} else {
-			printFlags = append(printFlags, "--"+flag)
-		}
-		printDescriptions = append(printDescriptions, field.Tag.Get("description"))
-		//flag on pointer ?
-		if defVal, ok := defaultValmap[flag]; ok {
-			if defVal.Kind() != reflect.Ptr {
-				// Set defaultValue on parsers
-				parsers[field.Type].SetValue(defaultValmap[flag].Interface())
-			}
-			printDefaultValues = append(printDefaultValues, parsers[field.Type].String())
-		} /*else {
-			printDefaultValues = append(printDefaultValues, "N/A")
-		}*/
-	}
-
+Flags:
+`
 	// Use a struct to give data to template
 	type TempStruct struct {
 		ProgName        string
 		ProgDescription string
 		SubCommands     map[string]string
-		Flags           []string
-		Descriptions    []string
-		DefaultValues   []string
 	}
-	tempStruct := TempStruct{
-		Flags:         printFlags,
-		Descriptions:  printDescriptions,
-		DefaultValues: printDefaultValues,
-	}
+	tempStruct := TempStruct{}
 	if cmd != nil {
 		tempStruct.ProgName = cmd.Name
 		tempStruct.ProgDescription = cmd.Description
@@ -637,7 +486,6 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 		}
 	} else {
 		_, tempStruct.ProgName = path.Split(os.Args[0])
-		tempStruct.ProgDescription = "N/A"
 	}
 
 	//Run Template
@@ -649,15 +497,99 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 	if err != nil {
 		return err
 	}
-	//And footer
-	fmt.Fprintf(os.Stdout, "\n\t%-50s %s\n", "-h, --help", "Print Help (this message) and exit")
+
+	return printFlagsDescriptionsDefaultValues(flagmap, defaultValmap, parsers, os.Stdout)
+}
+
+func printFlagsDescriptionsDefaultValues(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser, output io.Writer) error {
+	// Sort alphabetically & Delete unparsable flags in a slice
+	flags := []string{}
+	for flag, field := range flagmap {
+		if _, ok := parsers[field.Type]; ok {
+			flags = append(flags, flag)
+		}
+	}
+	sort.Strings(flags)
+
+	// Process data
+	descriptions := []string{}
+	defaultValues := []string{}
+	flagsWithDashs := []string{}
+	shortFlagsWithDash := []string{}
+	for _, flag := range flags {
+		field := flagmap[flag]
+		if short := field.Tag.Get("short"); len(short) == 1 {
+			shortFlagsWithDash = append(shortFlagsWithDash, "-"+short+",")
+		} else {
+			shortFlagsWithDash = append(shortFlagsWithDash, "")
+		}
+		flagsWithDashs = append(flagsWithDashs, "--"+flag)
+
+		//flag on pointer ?
+		if defVal, ok := defaultValmap[flag]; ok {
+			if defVal.Kind() != reflect.Ptr {
+				// Set defaultValue on parsers
+				parsers[field.Type].SetValue(defaultValmap[flag].Interface())
+			}
+
+			if defVal := parsers[field.Type].String(); len(defVal) > 0 {
+				defaultValues = append(defaultValues, fmt.Sprintf("(default \"%s\")", defVal))
+			} else {
+				defaultValues = append(defaultValues, "")
+			}
+		}
+
+		splittedDescriptions := split(field.Tag.Get("description"), 80)
+		for i, description := range splittedDescriptions {
+			descriptions = append(descriptions, description)
+			if i != 0 {
+				defaultValues = append(defaultValues, "")
+				flagsWithDashs = append(flagsWithDashs, "")
+				shortFlagsWithDash = append(shortFlagsWithDash, "")
+			}
+		}
+	}
+	//add help flag
+	shortFlagsWithDash = append(shortFlagsWithDash, "-h,")
+	flagsWithDashs = append(flagsWithDashs, "--help")
+	descriptions = append(descriptions, "Print Help (this message) and exit")
+	defaultValues = append(defaultValues, "")
+	return displayTab(output, shortFlagsWithDash, flagsWithDashs, descriptions, defaultValues)
+}
+func split(str string, width int) []string {
+	if len(str) > width {
+		index := strings.LastIndex(str[:width], " ")
+		if index == -1 {
+			index = width
+		}
+		return append([]string{strings.TrimSpace(str[:index])}, split(strings.TrimSpace(str[index:]), width)...)
+	}
+	return []string{str}
+}
+
+func displayTab(output io.Writer, columns ...[]string) error {
+	nbRow := len(columns[0])
+	nbCol := len(columns)
+	w := new(tabwriter.Writer)
+	w.Init(output, 0, 4, 1, ' ', 0)
+	for i := 0; i < nbRow; i++ {
+		row := ""
+		for j, col := range columns {
+			row += col[i]
+			if j != nbCol-1 {
+				row += "\t"
+			}
+		}
+		fmt.Fprintln(w, row)
+	}
+	w.Flush()
 	return nil
 }
 
 //PrintErrorWithCommand takes a not nil error and prints command line help
 func PrintErrorWithCommand(err error, flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser, cmd *Command, subCmd []*Command) error {
 	if err != flag.ErrHelp {
-		fmt.Printf("Error : %s\n", err)
+		fmt.Printf("Error here : %s\n", err)
 	}
 	PrintHelpWithCommand(flagmap, defaultValmap, parsers, cmd, subCmd)
 	return err
@@ -713,7 +645,7 @@ func (f *Flaeg) Parse(cmd *Command) (*Command, error) {
 		f.commmandArgs = f.args
 	}
 	if err := LoadWithCommand(cmd, f.commmandArgs, f.customParsers, f.commands); err != nil {
-		return nil, err
+		return cmd, err
 	}
 	return cmd, nil
 }
