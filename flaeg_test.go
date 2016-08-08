@@ -2555,7 +2555,7 @@ func TestGetTypesUnexported(t *testing.T) {
 	config := &ConfigWithUnexportedField{}
 	flagmap := make(map[string]reflect.StructField)
 	err := getTypesRecursive(reflect.ValueOf(config), flagmap, "")
-	checkErr := "Flied other is an unexported field"
+	checkErr := "Field other is an unexported field"
 	if err == nil || !strings.Contains(err.Error(), checkErr) {
 		t.Errorf("Expected error %s\ngot %s", checkErr, err)
 	}

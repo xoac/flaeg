@@ -35,7 +35,7 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.Struct
 			} else if len(objValue.Type().Field(i).Tag.Get("description")) > 0 {
 				fieldName := objValue.Type().Field(i).Name
 				if !isExported(fieldName) {
-					return fmt.Errorf("Flied %s is an unexported field", fieldName)
+					return fmt.Errorf("Field %s is an unexported field", fieldName)
 				}
 
 				name += objValue.Type().Name()
