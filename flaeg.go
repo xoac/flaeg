@@ -77,6 +77,21 @@ func getTypesRecursive(objValue reflect.Value, flagmap map[string]reflect.Struct
 	return nil
 }
 
+//GetPointerFlags returns flags on pointers
+func GetBoolFlags(config interface{}) ([]string, error) {
+	flagmap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
+		return []string{}, err
+	}
+	flags := make([]string, 0, len(flagmap))
+	for f, structField := range flagmap {
+		if structField.Type.Kind() == reflect.Bool {
+			flags = append(flags, f)
+		}
+	}
+	return flags, nil
+}
+
 //GetFlags returns flags
 func GetFlags(config interface{}) ([]string, error) {
 	flagmap := make(map[string]reflect.StructField)
