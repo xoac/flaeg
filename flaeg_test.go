@@ -147,6 +147,29 @@ func TestGetFlags(t *testing.T) {
 
 }
 
+func TestGetBoolFlags(t *testing.T) {
+	config := newConfiguration()
+	flags, err := GetBoolFlags(config)
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	check := []string{
+		"db",
+		"db.watch",
+		"owner",
+		"owner.name",
+	}
+	if len(check) != len(flags) {
+		t.Fatalf("Error, expected %d elements in parsers got %d", len(check), len(flags))
+	}
+	sort.Strings(check)
+	sort.Strings(flags)
+	if !reflect.DeepEqual(flags, check) {
+		t.Fatalf("Got %s expected %s\n", flags, check)
+	}
+
+}
+
 //CUSTOM PARSER
 // -- sliceServerValue format {IP,DC}
 type sliceServerValue []ServerInfo
