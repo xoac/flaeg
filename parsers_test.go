@@ -3,6 +3,7 @@ package flaeg
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestSliceStringsSet(t *testing.T) {
@@ -88,5 +89,51 @@ func TestSliceStringsSetValue(t *testing.T) {
 		if !reflect.DeepEqual(slice, check[i]) {
 			t.Fatalf("Expected:%s\ngot:%s", check[i], slice)
 		}
+	}
+}
+
+func TestSetDuration(t *testing.T) {
+	tests := []struct {
+		in  string
+		out time.Duration
+	}{
+		{
+			in:  "42",
+			out: 42 * time.Second,
+		},
+		{
+			in:  "42s",
+			out: 42 * time.Second,
+		},
+		{
+			in:  "5m",
+			out: 5 * time.Minute,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.in, func(t *testing.T) {
+			t.Parallel()
+			var dur Duration
+			if err := dur.Set(test.in); err != nil {
+				t.Fatalf("got error %s", err)
+			}
+
+			if time.Duration(dur) != test.out {
+				t.Errorf("got %#v, want %#v", time.Duration(dur), test.out)
+			}
+		})
+	}
+}
+
+func TestUnmarshalTextDuration(t *testing.T) {
+	var dur Duration
+	if err := dur.UnmarshalText([]byte("42")); err != nil {
+		t.Fatalf("got error %s", err)
+	}
+
+	if time.Duration(dur) != 42*time.Second {
+		t.Errorf("got %#v, want %#v", time.Duration(dur), 42*time.Second)
 	}
 }

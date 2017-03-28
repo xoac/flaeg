@@ -16,7 +16,7 @@ import (
 type Configuration struct {
 	Name     string        //no description struct tag, it will not be flaged
 	LogLevel string        `short:"l" description:"Log level"`      //string type field, short flag "-l"
-	Timeout  time.Duration `description:"Timeout duration"`         //time.Duration type field
+	Timeout  Duration      `description:"Timeout duration"`         // Duration type field
 	Db       *DatabaseInfo `description:"Enable database"`          //pointer type field (on DatabaseInfo)
 	Owner    *OwnerInfo    `description:"Enable Owner description"` //another pointer type field (on OwnerInfo)
 }
@@ -75,7 +75,7 @@ func newConfiguration() *Configuration {
 	return &Configuration{
 		Name:     "initName",
 		LogLevel: "DEBUG",
-		Timeout:  time.Second,
+		Timeout:  Duration(time.Second),
 		Owner:    &own,
 	}
 }
@@ -84,12 +84,12 @@ func TestGetTypesRecursive(t *testing.T) {
 	config := newConfiguration()
 	flagmap := make(map[string]reflect.StructField)
 	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatalf("Error %s", err.Error())
 	}
 	// Check only type
 	checkType := map[string]reflect.Type{
 		"loglevel":           reflect.TypeOf(""),
-		"timeout":            reflect.TypeOf(time.Second),
+		"timeout":            reflect.TypeOf(Duration(time.Second)),
 		"db":                 reflect.TypeOf(true),
 		"db.watch":           reflect.TypeOf(true),
 		"db.ip":              reflect.TypeOf(""),
@@ -218,8 +218,8 @@ func TestLoadParsers(t *testing.T) {
 	check[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	check[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	check[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	check[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	check[reflect.TypeOf(time.Now())] = &timeParser
 	if len(check) != len(parsers) {
@@ -258,8 +258,8 @@ func TestParseArgsTrivialFlags(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	//init args
@@ -277,7 +277,7 @@ func TestParseArgsTrivialFlags(t *testing.T) {
 	check := map[string]Parser{}
 	stringParser.SetValue("OFF")
 	check["loglevel"] = &stringParser
-	durationParser.SetValue(9 * time.Millisecond)
+	durationParser.SetValue(Duration(9 * time.Millisecond))
 	check["timeout"] = &durationParser
 	if len(check) != len(valmap) {
 		t.Fatalf("Error, expected %d elements in valmap got %d", len(check), len(valmap))
@@ -315,8 +315,8 @@ func TestParseArgsShortFlags(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	//init args
@@ -369,8 +369,8 @@ func TestParseArgsPointerFlag(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	//init args
@@ -426,8 +426,8 @@ func TestParseArgsUnderPointerFlag(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	//init args
@@ -485,8 +485,8 @@ func TestParseArgsPointerFlagUnderPointerFlag(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	//init args
@@ -544,8 +544,8 @@ func TestParseArgsCustomFlag(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	//init args
@@ -602,8 +602,8 @@ func TestParseArgsAll(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	//init args
@@ -633,7 +633,7 @@ func TestParseArgsAll(t *testing.T) {
 	check := map[string]Parser{}
 	stringParser.SetValue("INFO")
 	check["loglevel"] = &stringParser
-	durationParser.SetValue(time.Second)
+	durationParser.SetValue(Duration(time.Second))
 	check["timeout"] = &durationParser
 	boolParser.SetValue(true)
 	check["db"] = &boolParser
@@ -692,8 +692,8 @@ func TestParseArgsErrorNoParser(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	//init args
@@ -721,7 +721,7 @@ func TestGetDefaultValueInitConfigAllDefault(t *testing.T) {
 	defaultValmap := make(map[string]reflect.Value)
 	//TEST
 	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defPointerConfig), defaultValmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatalf("Error %s", err.Error())
 	}
 	//CHECK
 	checkDefaultStr := "DefaultOwnerNamePointer"
@@ -729,7 +729,7 @@ func TestGetDefaultValueInitConfigAllDefault(t *testing.T) {
 	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
 	checkValue := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf("DEBUG"),
-		"timeout":            reflect.ValueOf(time.Second),
+		"timeout":            reflect.ValueOf(Duration(time.Second)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
 		"db.watch":           reflect.ValueOf(true),
 		"db.ip":              reflect.ValueOf("192.168.1.2"),
@@ -769,7 +769,7 @@ func TestGetDefaultValueNoConfigNoDefault(t *testing.T) {
 	}
 	checkValue := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf(""),
-		"timeout":            reflect.ValueOf(time.Duration(0)),
+		"timeout":            reflect.ValueOf(Duration(0)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{}),
 		"db.watch":           reflect.ValueOf(false),
 		"db.ip":              reflect.ValueOf(""),
@@ -799,7 +799,7 @@ func TestGetDefaultValueInitConfigNoDefault(t *testing.T) {
 	config := &Configuration{
 		Name: "defaultName", //useless field not flaged
 		// LogLevel is not initialized, default value will be go default value : ""
-		Timeout: time.Millisecond,
+		Timeout: Duration(time.Millisecond),
 	}
 	defPointerConfig := &Configuration{
 		Db: nil, //If pointer field is nil, default value will be go default value
@@ -811,7 +811,7 @@ func TestGetDefaultValueInitConfigNoDefault(t *testing.T) {
 	}
 	checkValue := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf(""),
-		"timeout":            reflect.ValueOf(time.Millisecond),
+		"timeout":            reflect.ValueOf(Duration(time.Millisecond)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{}),
 		"db.watch":           reflect.ValueOf(false),
 		"db.ip":              reflect.ValueOf(""),
@@ -849,7 +849,7 @@ func TestGetDefaultNoConfigAllDefault(t *testing.T) {
 	checkDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	checkValue := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf(""),
-		"timeout":            reflect.ValueOf(time.Duration(0)),
+		"timeout":            reflect.ValueOf(Duration(time.Duration(0))),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
 		"db.watch":           reflect.ValueOf(true),
 		"db.ip":              reflect.ValueOf("192.168.1.2"),
@@ -894,8 +894,8 @@ func TestFillStructRecursiveNoConfigNoDefaultTrivialValmap(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
@@ -903,13 +903,13 @@ func TestFillStructRecursiveNoConfigNoDefaultTrivialValmap(t *testing.T) {
 	valmap := map[string]Parser{}
 	stringParser.SetValue("INFO")
 	valmap["loglevel"] = &stringParser
-	durationParser.SetValue(time.Second)
+	durationParser.SetValue(Duration(time.Second))
 	valmap["timeout"] = &durationParser
 
 	//init defaultValmap NoConfigNoDefault
 	defaultValmap := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf(""),
-		"timeout":            reflect.ValueOf(time.Duration(0)),
+		"timeout":            reflect.ValueOf(Duration(time.Duration(0))),
 		"db":                 reflect.ValueOf(&DatabaseInfo{}),
 		"db.watch":           reflect.ValueOf(false),
 		"db.ip":              reflect.ValueOf(""),
@@ -933,7 +933,7 @@ func TestFillStructRecursiveNoConfigNoDefaultTrivialValmap(t *testing.T) {
 	// fmt.Printf("Got : %+v\n", config)
 	check := &Configuration{}
 	check.LogLevel = "INFO"
-	check.Timeout = time.Second
+	check.Timeout = Duration(time.Second)
 	if !reflect.DeepEqual(config, check) {
 		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
@@ -961,8 +961,8 @@ func TestFillStructRecursiveNoConfigNoDefaultAllValmap(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
@@ -970,7 +970,7 @@ func TestFillStructRecursiveNoConfigNoDefaultAllValmap(t *testing.T) {
 	valmap := map[string]Parser{}
 	stringParser.SetValue("INFO")
 	valmap["loglevel"] = &stringParser
-	durationParser.SetValue(time.Second)
+	durationParser.SetValue(Duration(time.Second))
 	valmap["timeout"] = &durationParser
 	boolParser.SetValue(true)
 	valmap["db"] = &boolParser
@@ -1024,7 +1024,7 @@ func TestFillStructRecursiveNoConfigNoDefaultAllValmap(t *testing.T) {
 	checkDob, _ := time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 	check := &Configuration{
 		LogLevel: "INFO",
-		Timeout:  time.Second,
+		Timeout:  Duration(time.Second),
 		Db: &DatabaseInfo{
 			ServerInfo: ServerInfo{
 				Watch:  true,
@@ -1070,8 +1070,8 @@ func TestFillStructRecursiveNoConfigAllDefaultNoValmap(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
@@ -1132,8 +1132,8 @@ func TestFillStructRecursiveInitConfigAllDefaultNoValmap(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
@@ -1146,7 +1146,7 @@ func TestFillStructRecursiveInitConfigAllDefaultNoValmap(t *testing.T) {
 	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
 	defaultValmap := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf("DEBUG"),
-		"timeout":            reflect.ValueOf(time.Second),
+		"timeout":            reflect.ValueOf(Duration(time.Second)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
 		"db.watch":           reflect.ValueOf(true),
 		"db.ip":              reflect.ValueOf("192.168.1.2"),
@@ -1200,8 +1200,8 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerValmap(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
@@ -1217,7 +1217,7 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerValmap(t *testing.T) {
 	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
 	defaultValmap := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf("DEBUG"),
-		"timeout":            reflect.ValueOf(time.Second),
+		"timeout":            reflect.ValueOf(Duration(time.Second)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
 		"db.watch":           reflect.ValueOf(true),
 		"db.ip":              reflect.ValueOf("192.168.1.2"),
@@ -1287,8 +1287,8 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerUnderPointerValmap(t *tes
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
@@ -1304,7 +1304,7 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerUnderPointerValmap(t *tes
 	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
 	defaultValmap := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf("DEBUG"),
-		"timeout":            reflect.ValueOf(time.Second),
+		"timeout":            reflect.ValueOf(Duration(time.Second)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
 		"db.watch":           reflect.ValueOf(true),
 		"db.ip":              reflect.ValueOf("192.168.1.2"),
@@ -1328,7 +1328,7 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerUnderPointerValmap(t *tes
 	check := &Configuration{
 		Name:     "initName",
 		LogLevel: "DEBUG",
-		Timeout:  time.Second,
+		Timeout:  Duration(time.Second),
 		Owner: &OwnerInfo{
 			Name:        &checkDefaultStr,
 			DateOfBirth: checkDob,
@@ -1365,14 +1365,14 @@ func TestFillStructRecursiveNoConfigAllDefaultSomeValmap(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
 	//init valmap
 	valmap := map[string]Parser{}
-	durationParser.SetValue(5 * time.Second)
+	durationParser.SetValue(5 * Duration(time.Second))
 	valmap["timeout"] = &durationParser
 	boolParser.SetValue(true)
 	valmap["db"] = &boolParser
@@ -1408,7 +1408,7 @@ func TestFillStructRecursiveNoConfigAllDefaultSomeValmap(t *testing.T) {
 	//CHECK
 	// fmt.Printf("Got : %+v\n", config)
 	check := &Configuration{}
-	check.Timeout = 5 * time.Second
+	check.Timeout = 5 * Duration(time.Second)
 	check.Db = newDefaultPointersConfiguration().Db
 	check.Owner = newDefaultPointersConfiguration().Owner
 	check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
@@ -1522,7 +1522,7 @@ func TestLoadWithParsersInitConfigNoDefaultAllFlag(t *testing.T) {
 	check := &Configuration{
 		Name:     "initName",
 		LogLevel: "INFO",
-		Timeout:  time.Second,
+		Timeout:  Duration(time.Second),
 		Db: &DatabaseInfo{
 			ServerInfo: ServerInfo{
 				Watch:  true,
@@ -1702,8 +1702,8 @@ func TestParseArgsInvalidArgument(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	//init args
@@ -1744,8 +1744,8 @@ func TestParseArgsErrorUnknownFlag(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	//init args
@@ -1784,8 +1784,8 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 	parsers[reflect.TypeOf("")] = &stringParser
 	var float64Parser float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
-	var durationParser durationValue
-	parsers[reflect.TypeOf(time.Second)] = &durationParser
+	var durationParser Duration
+	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
 	var timeParser timeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 	//init args
@@ -1798,7 +1798,7 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
 	defaultValmap := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf("DEBUG"),
-		"timeout":            reflect.ValueOf(time.Second),
+		"timeout":            reflect.ValueOf(Duration(time.Second)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
 		"db.watch":           reflect.ValueOf(true),
 		"db.ip":              reflect.ValueOf("192.168.1.2"),
@@ -2470,7 +2470,7 @@ func TestSetPointersNilFullConfig(t *testing.T) {
 	config := &Configuration{
 		Name:     "Toto",
 		LogLevel: "Tata",
-		Timeout:  time.Nanosecond,
+		Timeout:  Duration(time.Nanosecond),
 		Db: &DatabaseInfo{
 			ServerInfo: ServerInfo{
 				Watch:  true,
@@ -2495,7 +2495,7 @@ func TestSetPointersNilFullConfig(t *testing.T) {
 	check := &Configuration{
 		Name:     "Toto",
 		LogLevel: "Tata",
-		Timeout:  time.Nanosecond,
+		Timeout:  Duration(time.Nanosecond),
 	}
 	if !reflect.DeepEqual(nilPointersConfig.Interface(), check) {
 		t.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, nilPointersConfig.Interface())
@@ -2503,7 +2503,7 @@ func TestSetPointersNilFullConfig(t *testing.T) {
 	checkInit := &Configuration{
 		Name:     "Toto",
 		LogLevel: "Tata",
-		Timeout:  time.Nanosecond,
+		Timeout:  Duration(time.Nanosecond),
 		Db: &DatabaseInfo{
 			ServerInfo: ServerInfo{
 				Watch:  true,
