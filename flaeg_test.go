@@ -724,19 +724,21 @@ func TestGetDefaultValueInitConfigAllDefault(t *testing.T) {
 		t.Fatalf("Error %s", err.Error())
 	}
 	//CHECK
+	checkDefaultStr := "DefaultOwnerNamePointer"
+	checkDefaultDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
 	checkValue := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf("DEBUG"),
 		"timeout":            reflect.ValueOf(Duration(time.Second)),
-		"db":                 reflect.ValueOf(false),
+		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
 		"db.watch":           reflect.ValueOf(true),
 		"db.ip":              reflect.ValueOf("192.168.1.2"),
 		"db.load":            reflect.ValueOf(32),
 		"db.load64":          reflect.ValueOf(int64(64)),
 		"db.comax":           reflect.ValueOf(uint(3200000000)),
 		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(true),
-		"owner.name":         reflect.ValueOf(true),
+		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
+		"owner.name":         reflect.ValueOf(&checkDefaultStr),
 		"owner.dob":          reflect.ValueOf(checkDob),
 		"owner.rate":         reflect.ValueOf(float64(0.999)),
 		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
@@ -768,15 +770,15 @@ func TestGetDefaultValueNoConfigNoDefault(t *testing.T) {
 	checkValue := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf(""),
 		"timeout":            reflect.ValueOf(Duration(0)),
-		"db":                 reflect.ValueOf(false),
+		"db":                 reflect.ValueOf(&DatabaseInfo{}),
 		"db.watch":           reflect.ValueOf(false),
 		"db.ip":              reflect.ValueOf(""),
 		"db.load":            reflect.ValueOf(0),
 		"db.load64":          reflect.ValueOf(int64(0)),
 		"db.comax":           reflect.ValueOf(uint(0)),
 		"db.connectionmax64": reflect.ValueOf(uint64(0)),
-		"owner":              reflect.ValueOf(false),
-		"owner.name":         reflect.ValueOf(false),
+		"owner":              reflect.ValueOf(&OwnerInfo{}),
+		"owner.name":         reflect.ValueOf(new(string)),
 		"owner.dob":          reflect.ValueOf(time.Time{}),
 		"owner.rate":         reflect.ValueOf(float64(0)),
 		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
@@ -810,15 +812,15 @@ func TestGetDefaultValueInitConfigNoDefault(t *testing.T) {
 	checkValue := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf(""),
 		"timeout":            reflect.ValueOf(Duration(time.Millisecond)),
-		"db":                 reflect.ValueOf(false),
+		"db":                 reflect.ValueOf(&DatabaseInfo{}),
 		"db.watch":           reflect.ValueOf(false),
 		"db.ip":              reflect.ValueOf(""),
 		"db.load":            reflect.ValueOf(0),
 		"db.load64":          reflect.ValueOf(int64(0)),
 		"db.comax":           reflect.ValueOf(uint(0)),
 		"db.connectionmax64": reflect.ValueOf(uint64(0)),
-		"owner":              reflect.ValueOf(false),
-		"owner.name":         reflect.ValueOf(false),
+		"owner":              reflect.ValueOf(&OwnerInfo{}),
+		"owner.name":         reflect.ValueOf(new(string)),
 		"owner.dob":          reflect.ValueOf(time.Time{}),
 		"owner.rate":         reflect.ValueOf(float64(0)),
 		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
@@ -843,19 +845,20 @@ func TestGetDefaultNoConfigAllDefault(t *testing.T) {
 	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defPointerConfig), defaultValmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
+	checkStr := "DefaultOwnerNamePointer"
 	checkDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	checkValue := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf(""),
 		"timeout":            reflect.ValueOf(Duration(time.Duration(0))),
-		"db":                 reflect.ValueOf(false),
+		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
 		"db.watch":           reflect.ValueOf(true),
 		"db.ip":              reflect.ValueOf("192.168.1.2"),
 		"db.load":            reflect.ValueOf(32),
 		"db.load64":          reflect.ValueOf(int64(64)),
 		"db.comax":           reflect.ValueOf(uint(3200000000)),
 		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(false),
-		"owner.name":         reflect.ValueOf(true),
+		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: checkDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
+		"owner.name":         reflect.ValueOf(&checkStr),
 		"owner.dob":          reflect.ValueOf(checkDob),
 		"owner.rate":         reflect.ValueOf(float64(0.111)),
 		"owner.servers":      reflect.ValueOf([]ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}),
@@ -922,7 +925,7 @@ func TestFillStructRecursiveNoConfigNoDefaultTrivialValmap(t *testing.T) {
 	}
 
 	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), reflect.ValueOf(newDefaultPointersConfiguration()), defaultValmap, valmap, ""); err != nil {
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1012,14 +1015,13 @@ func TestFillStructRecursiveNoConfigNoDefaultAllValmap(t *testing.T) {
 	}
 
 	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), reflect.ValueOf(newDefaultPointersConfiguration()), defaultValmap, valmap, ""); err != nil {
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
 	//CHECK
 	// fmt.Printf("Got : %+v\n", config)
 	checkDob, _ := time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
-	str := "DefaultOwnerNamePointer"
 	check := &Configuration{
 		LogLevel: "INFO",
 		Timeout:  Duration(time.Second),
@@ -1034,7 +1036,7 @@ func TestFillStructRecursiveNoConfigNoDefaultAllValmap(t *testing.T) {
 			ConnectionMax64: uint64(264),
 		},
 		Owner: &OwnerInfo{
-			Name:        &str,
+			Name:        new(string),
 			DateOfBirth: checkDob,
 			Rate:        float64(0.222),
 			Servers:     []ServerInfo{ServerInfo{IP: "1.0.0.1"}},
@@ -1096,7 +1098,7 @@ func TestFillStructRecursiveNoConfigAllDefaultNoValmap(t *testing.T) {
 		"owner.servers":      reflect.ValueOf([]ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}),
 	}
 	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), reflect.ValueOf(newDefaultPointersConfiguration()), defaultValmap, valmap, ""); err != nil {
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1160,7 +1162,7 @@ func TestFillStructRecursiveInitConfigAllDefaultNoValmap(t *testing.T) {
 	}
 
 	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), reflect.ValueOf(newDefaultPointersConfiguration()), defaultValmap, valmap, ""); err != nil {
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1231,7 +1233,7 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerValmap(t *testing.T) {
 	}
 
 	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), reflect.ValueOf(newDefaultPointersConfiguration()), defaultValmap, valmap, ""); err != nil {
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1318,7 +1320,7 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerUnderPointerValmap(t *tes
 	}
 
 	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), reflect.ValueOf(newDefaultPointersConfiguration()), defaultValmap, valmap, ""); err != nil {
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1399,7 +1401,7 @@ func TestFillStructRecursiveNoConfigAllDefaultSomeValmap(t *testing.T) {
 		"owner.servers":      reflect.ValueOf([]ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}),
 	}
 	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), reflect.ValueOf(newDefaultPointersConfiguration()), defaultValmap, valmap, ""); err != nil {
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
 		t.Errorf("Error %s", err.Error())
 	}
 
@@ -1486,7 +1488,7 @@ func TestLoadWithParsersInitConfigNoDefaultAllFlag(t *testing.T) {
 	//init config
 	config := newConfiguration()
 	//init default pointers
-	defaultPointers := newDefaultPointersConfiguration()
+	defaultPointers := &Configuration{}
 	//init custom parsers
 	customParsers := map[reflect.Type]Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
@@ -1517,7 +1519,6 @@ func TestLoadWithParsersInitConfigNoDefaultAllFlag(t *testing.T) {
 	//CHECK
 	// fmt.Printf("Got : %+v\n", config)
 	checkDob, _ := time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
-	str := "DefaultOwnerNamePointer"
 	check := &Configuration{
 		Name:     "initName",
 		LogLevel: "INFO",
@@ -1533,7 +1534,7 @@ func TestLoadWithParsersInitConfigNoDefaultAllFlag(t *testing.T) {
 			ConnectionMax64: uint64(264),
 		},
 		Owner: &OwnerInfo{
-			Name:        &str,
+			Name:        new(string),
 			DateOfBirth: checkDob,
 			Rate:        float64(0.222),
 			Servers:     []ServerInfo{ServerInfo{IP: "1.0.0.1"}},
@@ -2555,7 +2556,7 @@ func TestGetDefaultValueUnexportedFieldUnderPointer(t *testing.T) {
 	}
 	//check
 	checkValue := map[string]reflect.Value{
-		"ptrsubconfig":          reflect.ValueOf(false),
+		"ptrsubconfig":          reflect.ValueOf(&SubConfigWithUnexportedField{"ExportedSubFieldDefault", nil}),
 		"ptrsubconfig.exported": reflect.ValueOf("ExportedSubFieldDefault"),
 	}
 	if len(checkValue) != len(defaultValmap) {
