@@ -11,6 +11,21 @@ import (
 	"time"
 )
 
+
+//ConfigurationWithRepeatedStruct is struct which contains repeated struct
+type ConfigurationWithRepeatedStruct struct {
+	Repeated *RepeatedStruct `description:"Repeated struct"`
+	Container *RepeatedStructContainer `description:"Container"`
+}
+
+type RepeatedStruct struct {
+	Val string `description:"Value"`
+}
+
+type RepeatedStructContainer struct {
+	Repeated *RepeatedStruct `description:"Repeated struct"`
+}
+
 //Configuration is a struct which contains all differents type to field
 //using parsers on string, time.Duration, pointer, bool, int, int64, time.Time, float64
 type Configuration struct {
@@ -1417,6 +1432,46 @@ func TestFillStructRecursiveNoConfigAllDefaultSomeValmap(t *testing.T) {
 	if !reflect.DeepEqual(config, check) {
 		if !reflect.DeepEqual(config.Owner, check.Owner) {
 			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+		}
+		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+	}
+}
+
+//Test fillStructRecursive with repeated struct (with one on root)
+func TestFillStructRecursiveWithRepeatedPtrStruct(t *testing.T) {
+	config := &ConfigurationWithRepeatedStruct{}
+
+	//init parsers
+	parsers := map[reflect.Type]Parser{
+	}
+	var stringParser stringValue
+	parsers[reflect.TypeOf("")] = &stringParser
+
+	//init valmap
+	valmap := map[string]Parser{}
+	stringParser.SetValue("test")
+	valmap["container.repeated.val"] = &stringParser
+
+	//init defaultValmap NoConfigAllDefault
+	defaultValmap := map[string]reflect.Value{
+		"repeated": reflect.ValueOf(&RepeatedStruct{Val:"Default"}),
+		"container": reflect.ValueOf(&RepeatedStructContainer{&RepeatedStruct{Val:"DefaultInContainer"}}),
+	}
+	//test
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//CHECK
+	check := &ConfigurationWithRepeatedStruct{}
+	check.Container = &RepeatedStructContainer{
+		&RepeatedStruct{
+			Val: "test",
+		},
+	}
+	if !reflect.DeepEqual(config, check) {
+		if !reflect.DeepEqual(config.Container, check.Container) {
+			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Container, config.Container)
 		}
 		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
