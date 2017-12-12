@@ -1,4 +1,4 @@
-package flaeg
+package parse
 
 import (
 	"reflect"
@@ -8,10 +8,10 @@ import (
 
 func TestSliceStringsSet(t *testing.T) {
 	checkMap := map[string]SliceStrings{
-		"str":            SliceStrings{"str"},
-		"str1,str2":      SliceStrings{"str1", "str2"},
-		"str1;str2":      SliceStrings{"str1", "str2"},
-		"str1,str2;str3": SliceStrings{"str1", "str2", "str3"},
+		"str":            {"str"},
+		"str1,str2":      {"str1", "str2"},
+		"str1;str2":      {"str1", "str2"},
+		"str1,str2;str3": {"str1", "str2", "str3"},
 	}
 	for str, check := range checkMap {
 		var slice SliceStrings
@@ -38,14 +38,14 @@ func TestSliceStringsSetAdd(t *testing.T) {
 
 func TestSliceStringsGet(t *testing.T) {
 	slices := []SliceStrings{
-		SliceStrings{"str"},
-		SliceStrings{"str1", "str2"},
-		SliceStrings{"str1", "str2", "str3"},
+		{"str"},
+		{"str1", "str2"},
+		{"str1", "str2", "str3"},
 	}
 	check := [][]string{
-		[]string{"str"},
-		[]string{"str1", "str2"},
-		[]string{"str1", "str2", "str3"},
+		{"str"},
+		{"str1", "str2"},
+		{"str1", "str2", "str3"},
 	}
 	for i, slice := range slices {
 		if !reflect.DeepEqual(slice.Get(), check[i]) {
@@ -56,9 +56,9 @@ func TestSliceStringsGet(t *testing.T) {
 
 func TestSliceStringsString(t *testing.T) {
 	slices := []SliceStrings{
-		SliceStrings{"str"},
-		SliceStrings{"str1", "str2"},
-		SliceStrings{"str1", "str2", "str3"},
+		{"str"},
+		{"str1", "str2"},
+		{"str1", "str2", "str3"},
 	}
 	check := []string{
 		"[str]",
@@ -74,14 +74,14 @@ func TestSliceStringsString(t *testing.T) {
 
 func TestSliceStringsSetValue(t *testing.T) {
 	check := []SliceStrings{
-		SliceStrings{"str"},
-		SliceStrings{"str1", "str2"},
-		SliceStrings{"str1", "str2", "str3"},
+		{"str"},
+		{"str1", "str2"},
+		{"str1", "str2", "str3"},
 	}
 	slices := [][]string{
-		[]string{"str"},
-		[]string{"str1", "str2"},
-		[]string{"str1", "str2", "str3"},
+		{"str"},
+		{"str1", "str2"},
+		{"str1", "str2", "str3"},
 	}
 	for i, s := range slices {
 		var slice SliceStrings

@@ -1,4 +1,4 @@
-package flaeg
+package parse
 
 import (
 	"flag"
@@ -17,130 +17,130 @@ type Parser interface {
 }
 
 // -- bool Value
-type boolValue bool
+type BoolValue bool
 
-func (b *boolValue) Set(s string) error {
+func (b *BoolValue) Set(s string) error {
 	v, err := strconv.ParseBool(s)
-	*b = boolValue(v)
+	*b = BoolValue(v)
 	return err
 }
 
-func (b *boolValue) Get() interface{} { return bool(*b) }
+func (b *BoolValue) Get() interface{} { return bool(*b) }
 
-func (b *boolValue) String() string { return fmt.Sprintf("%v", *b) }
+func (b *BoolValue) String() string { return fmt.Sprintf("%v", *b) }
 
-func (b *boolValue) IsBoolFlag() bool { return true }
+func (b *BoolValue) IsBoolFlag() bool { return true }
 
-func (b *boolValue) SetValue(val interface{}) {
-	*b = boolValue(val.(bool))
+func (b *BoolValue) SetValue(val interface{}) {
+	*b = BoolValue(val.(bool))
 }
 
 // optional interface to indicate boolean flags that can be
 // supplied without "=value" text
-type boolFlag interface {
+type BoolFlag interface {
 	flag.Value
 	IsBoolFlag() bool
 }
 
 // -- int Value
-type intValue int
+type IntValue int
 
-func (i *intValue) Set(s string) error {
+func (i *IntValue) Set(s string) error {
 	v, err := strconv.ParseInt(s, 0, 64)
-	*i = intValue(v)
+	*i = IntValue(v)
 	return err
 }
 
-func (i *intValue) Get() interface{} { return int(*i) }
+func (i *IntValue) Get() interface{} { return int(*i) }
 
-func (i *intValue) String() string { return fmt.Sprintf("%v", *i) }
+func (i *IntValue) String() string { return fmt.Sprintf("%v", *i) }
 
-func (i *intValue) SetValue(val interface{}) {
-	*i = intValue(val.(int))
+func (i *IntValue) SetValue(val interface{}) {
+	*i = IntValue(val.(int))
 }
 
 // -- int64 Value
-type int64Value int64
+type Int64Value int64
 
-func (i *int64Value) Set(s string) error {
+func (i *Int64Value) Set(s string) error {
 	v, err := strconv.ParseInt(s, 0, 64)
-	*i = int64Value(v)
+	*i = Int64Value(v)
 	return err
 }
 
-func (i *int64Value) Get() interface{} { return int64(*i) }
+func (i *Int64Value) Get() interface{} { return int64(*i) }
 
-func (i *int64Value) String() string { return fmt.Sprintf("%v", *i) }
+func (i *Int64Value) String() string { return fmt.Sprintf("%v", *i) }
 
-func (i *int64Value) SetValue(val interface{}) {
-	*i = int64Value(val.(int64))
+func (i *Int64Value) SetValue(val interface{}) {
+	*i = Int64Value(val.(int64))
 }
 
 // -- uint Value
-type uintValue uint
+type UintValue uint
 
-func (i *uintValue) Set(s string) error {
+func (i *UintValue) Set(s string) error {
 	v, err := strconv.ParseUint(s, 0, 64)
-	*i = uintValue(v)
+	*i = UintValue(v)
 	return err
 }
 
-func (i *uintValue) Get() interface{} { return uint(*i) }
+func (i *UintValue) Get() interface{} { return uint(*i) }
 
-func (i *uintValue) String() string { return fmt.Sprintf("%v", *i) }
+func (i *UintValue) String() string { return fmt.Sprintf("%v", *i) }
 
-func (i *uintValue) SetValue(val interface{}) {
-	*i = uintValue(val.(uint))
+func (i *UintValue) SetValue(val interface{}) {
+	*i = UintValue(val.(uint))
 }
 
 // -- uint64 Value
-type uint64Value uint64
+type Uint64Value uint64
 
-func (i *uint64Value) Set(s string) error {
+func (i *Uint64Value) Set(s string) error {
 	v, err := strconv.ParseUint(s, 0, 64)
-	*i = uint64Value(v)
+	*i = Uint64Value(v)
 	return err
 }
 
-func (i *uint64Value) Get() interface{} { return uint64(*i) }
+func (i *Uint64Value) Get() interface{} { return uint64(*i) }
 
-func (i *uint64Value) String() string { return fmt.Sprintf("%v", *i) }
+func (i *Uint64Value) String() string { return fmt.Sprintf("%v", *i) }
 
-func (i *uint64Value) SetValue(val interface{}) {
-	*i = uint64Value(val.(uint64))
+func (i *Uint64Value) SetValue(val interface{}) {
+	*i = Uint64Value(val.(uint64))
 }
 
 // -- string Value
-type stringValue string
+type StringValue string
 
-func (s *stringValue) Set(val string) error {
-	*s = stringValue(val)
+func (s *StringValue) Set(val string) error {
+	*s = StringValue(val)
 	return nil
 }
 
-func (s *stringValue) Get() interface{} { return string(*s) }
+func (s *StringValue) Get() interface{} { return string(*s) }
 
-func (s *stringValue) String() string { return fmt.Sprintf("%s", *s) }
+func (s *StringValue) String() string { return fmt.Sprintf("%s", *s) }
 
-func (s *stringValue) SetValue(val interface{}) {
-	*s = stringValue(val.(string))
+func (s *StringValue) SetValue(val interface{}) {
+	*s = StringValue(val.(string))
 }
 
 // -- float64 Value
-type float64Value float64
+type Float64Value float64
 
-func (f *float64Value) Set(s string) error {
+func (f *Float64Value) Set(s string) error {
 	v, err := strconv.ParseFloat(s, 64)
-	*f = float64Value(v)
+	*f = Float64Value(v)
 	return err
 }
 
-func (f *float64Value) Get() interface{} { return float64(*f) }
+func (f *Float64Value) Get() interface{} { return float64(*f) }
 
-func (f *float64Value) String() string { return fmt.Sprintf("%v", *f) }
+func (f *Float64Value) String() string { return fmt.Sprintf("%v", *f) }
 
-func (f *float64Value) SetValue(val interface{}) {
-	*f = float64Value(val.(float64))
+func (f *Float64Value) SetValue(val interface{}) {
+	*f = Float64Value(val.(float64))
 }
 
 // Duration is a custom type suitable for parsing duration values.
@@ -178,20 +178,20 @@ func (d *Duration) UnmarshalText(text []byte) error {
 }
 
 // -- time.Time Value
-type timeValue time.Time
+type TimeValue time.Time
 
-func (t *timeValue) Set(s string) error {
+func (t *TimeValue) Set(s string) error {
 	v, err := time.Parse(time.RFC3339, s)
-	*t = timeValue(v)
+	*t = TimeValue(v)
 	return err
 }
 
-func (t *timeValue) Get() interface{} { return time.Time(*t) }
+func (t *TimeValue) Get() interface{} { return time.Time(*t) }
 
-func (t *timeValue) String() string { return (*time.Time)(t).String() }
+func (t *TimeValue) String() string { return (*time.Time)(t).String() }
 
-func (t *timeValue) SetValue(val interface{}) {
-	*t = timeValue(val.(time.Time))
+func (t *TimeValue) SetValue(val interface{}) {
+	*t = TimeValue(val.(time.Time))
 }
 
 //SliceStrings parse slice of strings

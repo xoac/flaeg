@@ -14,6 +14,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/containous/flaeg/parse"
 	flag "github.com/ogier/pflag"
 )
 
@@ -108,34 +109,34 @@ func GetFlags(config interface{}) ([]string, error) {
 
 //loadParsers loads default parsers and custom parsers given as parameter. Return a map [reflect.Type]parsers
 // bool, int, int64, uint, uint64, float64,
-func loadParsers(customParsers map[reflect.Type]Parser) (map[reflect.Type]Parser, error) {
-	parsers := map[reflect.Type]Parser{}
+func loadParsers(customParsers map[reflect.Type]parse.Parser) (map[reflect.Type]parse.Parser, error) {
+	parsers := map[reflect.Type]parse.Parser{}
 
-	var boolParser boolValue
+	var boolParser parse.BoolValue
 	parsers[reflect.TypeOf(true)] = &boolParser
 
-	var intParser intValue
+	var intParser parse.IntValue
 	parsers[reflect.TypeOf(1)] = &intParser
 
-	var int64Parser int64Value
+	var int64Parser parse.Int64Value
 	parsers[reflect.TypeOf(int64(1))] = &int64Parser
 
-	var uintParser uintValue
+	var uintParser parse.UintValue
 	parsers[reflect.TypeOf(uint(1))] = &uintParser
 
-	var uint64Parser uint64Value
+	var uint64Parser parse.Uint64Value
 	parsers[reflect.TypeOf(uint64(1))] = &uint64Parser
 
-	var stringParser stringValue
+	var stringParser parse.StringValue
 	parsers[reflect.TypeOf("")] = &stringParser
 
-	var float64Parser float64Value
+	var float64Parser parse.Float64Value
 	parsers[reflect.TypeOf(float64(1.5))] = &float64Parser
 
-	var durationParser Duration
-	parsers[reflect.TypeOf(Duration(time.Second))] = &durationParser
+	var durationParser parse.Duration
+	parsers[reflect.TypeOf(parse.Duration(time.Second))] = &durationParser
 
-	var timeParser timeValue
+	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
 	for rType, parser := range customParsers {
@@ -146,15 +147,15 @@ func loadParsers(customParsers map[reflect.Type]Parser) (map[reflect.Type]Parser
 
 //ParseArgs : parses args return valmap map[flag]Getter, using parsers map[type]Getter
 //args must be formated as like as flag documentation. See https://golang.org/pkg/flag
-func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers map[reflect.Type]Parser) (map[string]Parser, error) {
+func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers map[reflect.Type]parse.Parser) (map[string]parse.Parser, error) {
 	//Return var
-	valmap := make(map[string]Parser)
+	valmap := make(map[string]parse.Parser)
 	//Visitor in flag.Parse
 	flagList := []*flag.Flag{}
 	visitor := func(fl *flag.Flag) {
 		flagList = append(flagList, fl)
 	}
-	newParsers := map[string]Parser{}
+	newParsers := map[string]parse.Parser{}
 	flagSet := flag.NewFlagSet("flaeg.Load", flag.ContinueOnError)
 	//Disable output
 	flagSet.SetOutput(ioutil.Discard)
@@ -165,7 +166,7 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 		if parser, ok := parsers[structField.Type]; ok {
 			newparserValue := reflect.New(reflect.TypeOf(parser).Elem())
 			newparserValue.Elem().Set(reflect.ValueOf(parser).Elem())
-			newparser := newparserValue.Interface().(Parser)
+			newparser := newparserValue.Interface().(parse.Parser)
 			if short := structField.Tag.Get("short"); len(short) == 1 {
 				// fmt.Printf("short : %s long : %s\n", short, flag)
 				flagSet.VarP(newparser, flag, short, structField.Tag.Get("description"))
@@ -296,7 +297,7 @@ func setPointersNil(objValue reflect.Value) (reflect.Value, error) {
 }
 
 //FillStructRecursive initialize a value of any taged Struct given by reference
-func fillStructRecursive(objValue reflect.Value, defaultPointerValmap map[string]reflect.Value, valmap map[string]Parser, key string) error {
+func fillStructRecursive(objValue reflect.Value, defaultPointerValmap map[string]reflect.Value, valmap map[string]parse.Parser, key string) error {
 	name := key
 	switch objValue.Kind() {
 	case reflect.Struct:
@@ -379,7 +380,7 @@ func fillStructRecursive(objValue reflect.Value, defaultPointerValmap map[string
 }
 
 // SetFields sets value to fieldValue using tag as key in valmap
-func setFields(fieldValue reflect.Value, val Parser) error {
+func setFields(fieldValue reflect.Value, val parse.Parser) error {
 	if fieldValue.CanSet() {
 		fieldValue.Set(reflect.ValueOf(val).Elem().Convert(fieldValue.Type()))
 	} else {
@@ -389,12 +390,12 @@ func setFields(fieldValue reflect.Value, val Parser) error {
 }
 
 //PrintHelp generates and prints command line help
-func PrintHelp(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser) error {
+func PrintHelp(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]parse.Parser) error {
 	return PrintHelpWithCommand(flagmap, defaultValmap, parsers, nil, nil)
 }
 
 //PrintError takes a not nil error and prints command line help
-func PrintError(err error, flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser) error {
+func PrintError(err error, flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]parse.Parser) error {
 	if err != flag.ErrHelp {
 		fmt.Printf("Error : %s\n", err)
 	}
@@ -406,7 +407,7 @@ func PrintError(err error, flagmap map[string]reflect.StructField, defaultValmap
 
 //LoadWithParsers initializes config : struct fields given by reference, with args : arguments.
 //Some custom parsers may be given.
-func LoadWithParsers(config interface{}, defaultValue interface{}, args []string, customParsers map[reflect.Type]Parser) error {
+func LoadWithParsers(config interface{}, defaultValue interface{}, args []string, customParsers map[reflect.Type]parse.Parser) error {
 	cmd := &Command{
 		Config:                config,
 		DefaultPointersConfig: defaultValue,
@@ -437,7 +438,7 @@ type Command struct {
 
 //LoadWithCommand initializes config : struct fields given by reference, with args : arguments.
 //Some custom parsers and some subCommand may be given.
-func LoadWithCommand(cmd *Command, cmdArgs []string, customParsers map[reflect.Type]Parser, subCommand []*Command) error {
+func LoadWithCommand(cmd *Command, cmdArgs []string, customParsers map[reflect.Type]parse.Parser, subCommand []*Command) error {
 
 	parsers, err := loadParsers(customParsers)
 	if err != nil {
@@ -470,7 +471,7 @@ func LoadWithCommand(cmd *Command, cmdArgs []string, customParsers map[reflect.T
 }
 
 //PrintHelpWithCommand generates and prints command line help for a Command
-func PrintHelpWithCommand(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser, cmd *Command, subCmd []*Command) error {
+func PrintHelpWithCommand(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]parse.Parser, cmd *Command, subCmd []*Command) error {
 	// Define a templates
 	// Using POSXE STD : http://pubs.opengroup.org/onlinepubs/9699919799/
 	const helper = `{{if .ProgDescription}}{{.ProgDescription}}
@@ -517,7 +518,7 @@ Flags:
 	return printFlagsDescriptionsDefaultValues(flagmap, defaultValmap, parsers, os.Stdout)
 }
 
-func printFlagsDescriptionsDefaultValues(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser, output io.Writer) error {
+func printFlagsDescriptionsDefaultValues(flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]parse.Parser, output io.Writer) error {
 	// Sort alphabetically & Delete unparsable flags in a slice
 	flags := []string{}
 	for flag, field := range flagmap {
@@ -603,7 +604,7 @@ func displayTab(output io.Writer, columns ...[]string) error {
 }
 
 //PrintErrorWithCommand takes a not nil error and prints command line help
-func PrintErrorWithCommand(err error, flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]Parser, cmd *Command, subCmd []*Command) error {
+func PrintErrorWithCommand(err error, flagmap map[string]reflect.StructField, defaultValmap map[string]reflect.Value, parsers map[reflect.Type]parse.Parser, cmd *Command, subCmd []*Command) error {
 	if err != flag.ErrHelp {
 		fmt.Printf("Error here : %s\n", err)
 	}
@@ -619,7 +620,7 @@ type Flaeg struct {
 	commands      []*Command ///rootCommand is th fist one in this slice
 	args          []string
 	commmandArgs  []string
-	customParsers map[reflect.Type]Parser
+	customParsers map[reflect.Type]parse.Parser
 }
 
 //New creats and initialize a pointer on Flaeg
@@ -627,7 +628,7 @@ func New(rootCommand *Command, args []string) *Flaeg {
 	var f Flaeg
 	f.commands = []*Command{rootCommand}
 	f.args = args
-	f.customParsers = map[reflect.Type]Parser{}
+	f.customParsers = map[reflect.Type]parse.Parser{}
 	return &f
 }
 
@@ -637,7 +638,7 @@ func (f *Flaeg) AddCommand(command *Command) {
 }
 
 //AddParser adds custom parser for a type to the map of custom parsers
-func (f *Flaeg) AddParser(typ reflect.Type, parser Parser) {
+func (f *Flaeg) AddParser(typ reflect.Type, parser parse.Parser) {
 	f.customParsers[typ] = parser
 }
 
