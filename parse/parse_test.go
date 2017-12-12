@@ -13,26 +13,31 @@ func TestSliceStringsSet(t *testing.T) {
 		"str1;str2":      {"str1", "str2"},
 		"str1,str2;str3": {"str1", "str2", "str3"},
 	}
+
 	for str, check := range checkMap {
 		var slice SliceStrings
 		if err := slice.Set(str); err != nil {
 			t.Fatalf("Error :%s", err)
 		}
+
 		if !reflect.DeepEqual(slice, check) {
-			t.Fatalf("Expected:%s\ngot:%s", check, slice)
+			t.Errorf("Expected: %s\ngot: %s", check, slice)
 		}
 	}
 }
+
 func TestSliceStringsSetAdd(t *testing.T) {
 	slice := SliceStrings{"str1"}
+
 	//test
 	if err := slice.Set("str2,str3"); err != nil {
 		t.Fatalf("Error :%s", err)
 	}
+
 	//check
 	check := SliceStrings{"str1", "str2", "str3"}
 	if !reflect.DeepEqual(slice, check) {
-		t.Fatalf("Expected:%s\ngot:%s", check, slice)
+		t.Errorf("Expected: %s\ngot: %s", check, slice)
 	}
 }
 
@@ -47,9 +52,10 @@ func TestSliceStringsGet(t *testing.T) {
 		{"str1", "str2"},
 		{"str1", "str2", "str3"},
 	}
+
 	for i, slice := range slices {
 		if !reflect.DeepEqual(slice.Get(), check[i]) {
-			t.Fatalf("Expected:%s\ngot:%s", check[i], slice)
+			t.Errorf("Expected: %s\ngot: %s", check[i], slice)
 		}
 	}
 }
@@ -65,9 +71,10 @@ func TestSliceStringsString(t *testing.T) {
 		"[str1 str2]",
 		"[str1 str2 str3]",
 	}
+
 	for i, slice := range slices {
 		if !reflect.DeepEqual(slice.String(), check[i]) {
-			t.Fatalf("Expected:%s\ngot:%s", check[i], slice)
+			t.Errorf("Expected:%s\ngot:%s", check[i], slice)
 		}
 	}
 }
@@ -83,11 +90,12 @@ func TestSliceStringsSetValue(t *testing.T) {
 		{"str1", "str2"},
 		{"str1", "str2", "str3"},
 	}
+
 	for i, s := range slices {
 		var slice SliceStrings
 		slice.SetValue(s)
 		if !reflect.DeepEqual(slice, check[i]) {
-			t.Fatalf("Expected:%s\ngot:%s", check[i], slice)
+			t.Errorf("Expected: %s\ngot: %s", check[i], slice)
 		}
 	}
 }
@@ -115,9 +123,10 @@ func TestSetDuration(t *testing.T) {
 		test := test
 		t.Run(test.in, func(t *testing.T) {
 			t.Parallel()
+
 			var dur Duration
 			if err := dur.Set(test.in); err != nil {
-				t.Fatalf("got error %s", err)
+				t.Fatal(err)
 			}
 
 			if time.Duration(dur) != test.out {

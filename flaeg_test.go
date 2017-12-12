@@ -1,6 +1,7 @@
 package flaeg
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,7 +14,7 @@ import (
 	"github.com/containous/flaeg/parse"
 )
 
-//ConfigurationWithRepeatedStruct is struct which contains repeated struct
+// ConfigurationWithRepeatedStruct is struct which contains repeated struct
 type ConfigurationWithRepeatedStruct struct {
 	Repeated  *RepeatedStruct          `description:"Repeated struct"`
 	Container *RepeatedStructContainer `description:"Container"`
@@ -27,43 +28,43 @@ type RepeatedStructContainer struct {
 	Repeated *RepeatedStruct `description:"Repeated struct"`
 }
 
-//Configuration is a struct which contains all differents type to field
-//using parsers on string, time.Duration, pointer, bool, int, int64, time.Time, float64
+// Configuration is a struct which contains all different type to field
+// using parsers on string, time.Duration, pointer, bool, int, int64, time.Time, float64
 type Configuration struct {
-	Name     string         //no description struct tag, it will not be flaged
-	LogLevel string         `short:"l" description:"Log level"`      //string type field, short flag "-l"
+	Name     string         // no description struct tag, it will not be flaged
+	LogLevel string         `short:"l" description:"Log level"`      // string type field, short flag "-l"
 	Timeout  parse.Duration `description:"Timeout duration"`         // Duration type field
-	Db       *DatabaseInfo  `description:"Enable database"`          //pointer type field (on DatabaseInfo)
-	Owner    *OwnerInfo     `description:"Enable Owner description"` //another pointer type field (on OwnerInfo)
+	Db       *DatabaseInfo  `description:"Enable database"`          // pointer type field (on DatabaseInfo)
+	Owner    *OwnerInfo     `description:"Enable Owner description"` // another pointer type field (on OwnerInfo)
 }
 
 type ServerInfo struct {
-	Watch  bool   `description:"Watch device"`      //bool type
-	IP     string `description:"Server ip address"` //string type field
-	Load   int    `description:"Server load"`       //int type field
-	Load64 int64  `description:"Server load"`       //int64 type field, same description just to be sure it works
+	Watch  bool   `description:"Watch device"`      // bool type
+	IP     string `description:"Server ip address"` // string type field
+	Load   int    `description:"Server load"`       // int type field
+	Load64 int64  `description:"Server load"`       // int64 type field, same description just to be sure it works
 }
 type DatabaseInfo struct {
-	ServerInfo             //Go throught annonymous field
-	ConnectionMax   uint   `long:"comax" description:"Number max of connections on database"` //uint type field, long flag "--comax"
-	ConnectionMax64 uint64 `description:"Number max of connections on database"`              //uint64 type field, same description just to be sure it works
+	ServerInfo             //Go through anonymous field
+	ConnectionMax   uint   `long:"comax" description:"Number max of connections on database"` // uint type field, long flag "--comax"
+	ConnectionMax64 uint64 `description:"Number max of connections on database"`              // uint64 type field, same description just to be sure it works
 }
 type OwnerInfo struct {
-	Name        *string      `description:"Owner name"`                     //pointer type field on string
-	DateOfBirth time.Time    `long:"dob" description:"Owner date of birth"` //time.Time type field, long flag "--dob"
-	Rate        float64      `description:"Owner rate"`                     //float64 type field
-	Servers     []ServerInfo `description:"Owner Server"`                   //slice of ServerInfo type field, need a custom parser
+	Name        *string      `description:"Owner name"`                     // pointer type field on string
+	DateOfBirth time.Time    `long:"dob" description:"Owner date of birth"` // time.Time type field, long flag "--dob"
+	Rate        float64      `description:"Owner rate"`                     // float64 type field
+	Servers     []ServerInfo `description:"Owner Server"`                   // slice of ServerInfo type field, need a custom parser
 }
 
-//newDefaultConfiguration returns a pointer on Configuration with default values
+// newDefaultConfiguration returns a pointer on Configuration with default values
 func newDefaultPointersConfiguration() *Configuration {
 	var db DatabaseInfo
 	db.Watch = true
 	db.IP = "192.168.1.2"
 	db.Load = 32
 	db.Load64 = 64
-	db.ConnectionMax = 3200000000            //max 4294967295
-	db.ConnectionMax64 = 6400000000000000000 //max 18446744073709551615
+	db.ConnectionMax = 3200000000            // max 4294967295
+	db.ConnectionMax64 = 6400000000000000000 // max 18446744073709551615
 
 	var own OwnerInfo
 	str := "DefaultOwnerNamePointer"
@@ -71,17 +72,18 @@ func newDefaultPointersConfiguration() *Configuration {
 	own.DateOfBirth, _ = time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	own.Rate = 0.111
 	own.Servers = []ServerInfo{
-		ServerInfo{IP: "192.168.1.2"},
-		ServerInfo{IP: "192.168.1.3"},
-		ServerInfo{IP: "192.168.1.4"},
+		{IP: "192.168.1.2"},
+		{IP: "192.168.1.3"},
+		{IP: "192.168.1.4"},
 	}
+
 	return &Configuration{
 		Db:    &db,
 		Owner: &own,
 	}
 }
 
-//newConfiguration returns a pointer on Configuration initialized
+// newConfiguration returns a pointer on Configuration initialized
 func newConfiguration() *Configuration {
 	var own OwnerInfo
 	str := "InitOwnerNamePointer"
@@ -98,10 +100,11 @@ func newConfiguration() *Configuration {
 
 func TestGetTypesRecursive(t *testing.T) {
 	config := newConfiguration()
-	flagmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Fatalf("Error %s", err.Error())
+	flagMap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagMap, ""); err != nil {
+		t.Fatal(err)
 	}
+
 	// Check only type
 	checkType := map[string]reflect.Type{
 		"loglevel":           reflect.TypeOf(""),
@@ -119,13 +122,14 @@ func TestGetTypesRecursive(t *testing.T) {
 		"owner.rate":         reflect.TypeOf(float64(1.1)),
 		"owner.servers":      reflect.TypeOf([]ServerInfo{}),
 	}
-	if len(checkType) != len(flagmap) {
-		t.Fatalf("Error, expected %d elements in flagmap got %d", len(checkType), len(flagmap))
+
+	if len(checkType) != len(flagMap) {
+		t.Fatalf("expected %d elements in flagMap got %d", len(checkType), len(flagMap))
 	}
-	for name, field := range flagmap {
-		// fmt.Printf("%s : %+v\n", name, field)
+
+	for name, field := range flagMap {
 		if checkType[name] != field.Type {
-			t.Fatalf("Tag : %s, got %s expected %s\n", name, field.Type, checkType[name])
+			t.Errorf("Tag : %s, got %s expected %s\n", name, field.Type, checkType[name])
 		}
 	}
 }
@@ -134,8 +138,9 @@ func TestGetFlags(t *testing.T) {
 	config := newConfiguration()
 	flags, err := GetFlags(config)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
+
 	check := []string{
 		"loglevel",
 		"timeout",
@@ -152,46 +157,51 @@ func TestGetFlags(t *testing.T) {
 		"owner.rate",
 		"owner.servers",
 	}
+
 	if len(check) != len(flags) {
-		t.Fatalf("Error, expected %d elements in parsers got %d", len(check), len(flags))
-	}
-	sort.Strings(check)
-	sort.Strings(flags)
-	if !reflect.DeepEqual(flags, check) {
-		t.Fatalf("Got %s expected %s\n", flags, check)
+		t.Errorf("expected %d elements in parsers got %d", len(check), len(flags))
 	}
 
+	sort.Strings(check)
+	sort.Strings(flags)
+
+	if !reflect.DeepEqual(flags, check) {
+		t.Errorf("Got %s expected %s\n", flags, check)
+	}
 }
 
 func TestGetBoolFlags(t *testing.T) {
 	config := newConfiguration()
 	flags, err := GetBoolFlags(config)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
+
 	check := []string{
 		"db",
 		"db.watch",
 		"owner",
 		"owner.name",
 	}
+
 	if len(check) != len(flags) {
-		t.Fatalf("Error, expected %d elements in parsers got %d", len(check), len(flags))
+		t.Errorf("expected %d elements in parsers got %d", len(check), len(flags))
 	}
+
 	sort.Strings(check)
 	sort.Strings(flags)
-	if !reflect.DeepEqual(flags, check) {
-		t.Fatalf("Got %s expected %s\n", flags, check)
-	}
 
+	if !reflect.DeepEqual(flags, check) {
+		t.Errorf("Got %s expected %s\n", flags, check)
+	}
 }
 
-//CUSTOM PARSER
+// CUSTOM PARSER
 // -- sliceServerValue format {IP,DC}
 type sliceServerValue []ServerInfo
 
 func (c *sliceServerValue) Set(s string) error {
-	//could use RegExp
+	// could use RegExp
 	srv := ServerInfo{IP: s}
 	*c = append(*c, srv)
 	return nil
@@ -206,17 +216,18 @@ func (c *sliceServerValue) SetValue(val interface{}) {
 }
 
 func TestLoadParsers(t *testing.T) {
-	//inti customParsers
+	// init customParsers
 	customParsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
-	//test
-	parsers, err := loadParsers(customParsers)
+
+	// test
+	parsers, err := parse.LoadParsers(customParsers)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//Check
+	// Check
 	check := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -238,25 +249,28 @@ func TestLoadParsers(t *testing.T) {
 	check[reflect.TypeOf(parse.Duration(time.Second))] = &durationParser
 	var timeParser parse.TimeValue
 	check[reflect.TypeOf(time.Now())] = &timeParser
+
 	if len(check) != len(parsers) {
-		t.Fatalf("Error, expected %d elements in parsers got %d", len(check), len(parsers))
+		t.Errorf("expected %d elements in parsers got %d", len(check), len(parsers))
 	}
+
 	for typ, parser := range parsers {
 		if !reflect.DeepEqual(parser, check[typ]) {
-			t.Fatalf("Got %s expected %s\n", parser, check[typ])
+			t.Errorf("Got %s expected %s\n", parser, check[typ])
 		}
 	}
 }
 
-//Test ParseArgs with trivial flags (ie not short, not on custom parser, not on pointer)
+// Test ParseArgs with trivial flags (ie not short, not on custom parser, not on pointer)
 func TestParseArgsTrivialFlags(t *testing.T) {
-	//We assume that getTypesRecursive works well
+	// We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	flagMap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagMap, ""); err != nil {
+		t.Fatal(err)
 	}
-	//init parsers
+
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -278,42 +292,47 @@ func TestParseArgsTrivialFlags(t *testing.T) {
 	parsers[reflect.TypeOf(parse.Duration(time.Second))] = &durationParser
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
-	//init args
+
+	// init args
 	args := []string{
 		"--loglevel=OFF",
 		"--timeout=9ms",
 	}
-	//test
-	valmap, err := parseArgs(args, flagmap, parsers)
+
+	// test
+	valMap, err := parseArgs(args, flagMap, parsers)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//check
+	// check
 	check := map[string]parse.Parser{}
 	stringParser.SetValue("OFF")
 	check["loglevel"] = &stringParser
 	durationParser.SetValue(parse.Duration(9 * time.Millisecond))
 	check["timeout"] = &durationParser
-	if len(check) != len(valmap) {
-		t.Fatalf("Error, expected %d elements in valmap got %d", len(check), len(valmap))
+
+	if len(check) != len(valMap) {
+		t.Errorf("expected %d elements in valMap got %d", len(check), len(valMap))
 	}
-	for flag, parser := range valmap {
+
+	for flag, parser := range valMap {
 		if !reflect.DeepEqual(parser, check[flag]) {
-			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+			t.Errorf("Got %s expected %s\n", parser, check[flag])
 		}
 	}
 }
 
-//Test ParseArgs with short flags
+// Test ParseArgs with short flags
 func TestParseArgsShortFlags(t *testing.T) {
-	//We assume that getTypesRecursive works well
+	// We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	flagMap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagMap, ""); err != nil {
+		t.Fatal(err)
 	}
-	//init parsers
+
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -335,39 +354,48 @@ func TestParseArgsShortFlags(t *testing.T) {
 	parsers[reflect.TypeOf(parse.Duration(time.Second))] = &durationParser
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
-	//init args
+
+	// init args
 	args := []string{
 		"-lWARN",
 	}
-	//test
-	valmap, err := parseArgs(args, flagmap, parsers)
+
+	// test
+	valMap, err := parseArgs(args, flagMap, parsers)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//check
+	// check
 	check := map[string]parse.Parser{}
-	stringParser.Set("WARN")
-	check["loglevel"] = &stringParser
-	if len(check) != len(valmap) {
-		t.Fatalf("Error, expected %d elements in valmap got %d", len(check), len(valmap))
+	err = stringParser.Set("WARN")
+	if err != nil {
+		t.Fatal(err)
 	}
-	for flag, parser := range valmap {
+
+	check["loglevel"] = &stringParser
+
+	if len(check) != len(valMap) {
+		t.Errorf("expected %d elements in valMap got %d", len(check), len(valMap))
+	}
+
+	for flag, parser := range valMap {
 		if !reflect.DeepEqual(parser, check[flag]) {
-			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+			t.Errorf("Got %s expected %s\n", parser, check[flag])
 		}
 	}
 }
 
-//Test ParseArgs call Flag on pointers
+// Test ParseArgs call Flag on pointers
 func TestParseArgsPointerFlag(t *testing.T) {
-	//We assume that getTypesRecursive works well
+	// We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	flagMap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagMap, ""); err != nil {
+		t.Fatal(err)
 	}
-	//init parsers
+
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -389,42 +417,47 @@ func TestParseArgsPointerFlag(t *testing.T) {
 	parsers[reflect.TypeOf(parse.Duration(time.Second))] = &durationParser
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
-	//init args
+
+	// init args
 	args := []string{
 		"--db",
 		"--owner",
 	}
-	//test
-	valmap, err := parseArgs(args, flagmap, parsers)
+
+	// test
+	valmap, err := parseArgs(args, flagMap, parsers)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//check
+	// check
 	check := map[string]parse.Parser{}
 	checkDb := parse.BoolValue(true)
 	check["db"] = &checkDb
 	checkOwner := parse.BoolValue(true)
 	check["owner"] = &checkOwner
+
 	if len(check) != len(valmap) {
-		t.Fatalf("Error, expected %d elements in valmap got %d", len(check), len(valmap))
+		t.Errorf("expected %d elements in valmap got %d", len(check), len(valmap))
 	}
+
 	for flag, parser := range valmap {
 		if !reflect.DeepEqual(parser, check[flag]) {
-			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+			t.Errorf("Got %s expected %s\n", parser, check[flag])
 		}
 	}
 }
 
-//Test ParseArgs with flags under a pointer and a long flag
+// Test ParseArgs with flags under a pointer and a long flag
 func TestParseArgsUnderPointerFlag(t *testing.T) {
-	//We assume that getTypesRecursive works well
+	// We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	flagMap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagMap, ""); err != nil {
+		t.Fatal(err)
 	}
-	//init parsers
+
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -446,18 +479,20 @@ func TestParseArgsUnderPointerFlag(t *testing.T) {
 	parsers[reflect.TypeOf(parse.Duration(time.Second))] = &durationParser
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
-	//init args
+
+	// init args
 	args := []string{
 		"--owner.name",
 		"--db.comax=5000000000",
 	}
-	//test
-	valmap, err := parseArgs(args, flagmap, parsers)
+
+	// test
+	valmap, err := parseArgs(args, flagMap, parsers)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//check
+	// check
 	check := map[string]parse.Parser{}
 	boolParser.SetValue(true)
 	check["owner.name"] = &boolParser
@@ -465,25 +500,26 @@ func TestParseArgsUnderPointerFlag(t *testing.T) {
 	check["db.comax"] = &uintParser
 
 	if len(check) != len(valmap) {
-		t.Fatalf("Error, expected %d elements in valmap got %d", len(check), len(valmap))
+		t.Errorf("expected %d elements in valmap got %d", len(check), len(valmap))
 	}
 
 	for flag, parser := range valmap {
 		if !reflect.DeepEqual(parser, check[flag]) {
-			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+			t.Errorf("Got %s expected %s\n", parser, check[flag])
 		}
 	}
 }
 
-//Test ParseArgs with flag on pointer and flag under a pointer together
+// Test ParseArgs with flag on pointer and flag under a pointer together
 func TestParseArgsPointerFlagUnderPointerFlag(t *testing.T) {
-	//We assume that getTypesRecursive works well
+	// We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	flagMap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagMap, ""); err != nil {
+		t.Fatal(err)
 	}
-	//init parsers
+
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -505,44 +541,49 @@ func TestParseArgsPointerFlagUnderPointerFlag(t *testing.T) {
 	parsers[reflect.TypeOf(parse.Duration(time.Second))] = &durationParser
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
-	//init args
+
+	// init args
 	args := []string{
 		"--db",
 		"--db.watch",
 		"--db.connectionmax64=900",
 	}
-	//test
-	valmap, err := parseArgs(args, flagmap, parsers)
+
+	// test
+	valMap, err := parseArgs(args, flagMap, parsers)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//check
+	// check
 	check := map[string]parse.Parser{}
 	boolParser.SetValue(true)
 	check["db"] = &boolParser
 	uint64Parser.SetValue(uint64(900))
 	check["db.connectionmax64"] = &uint64Parser
 	check["db.watch"] = &boolParser
-	if len(check) != len(valmap) {
-		t.Fatalf("Error, expected %d elements in valmap got %d", len(check), len(valmap))
+
+	if len(check) != len(valMap) {
+		t.Errorf("expected %d elements in valMap got %d", len(check), len(valMap))
 	}
-	for flag, parser := range valmap {
+
+	for flag, parser := range valMap {
 		if !reflect.DeepEqual(parser, check[flag]) {
-			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+			t.Errorf("Got %s expected %s\n", parser, check[flag])
 		}
 	}
 }
 
-//Test ParseArgs call Flag with custom parsers
+// Test ParseArgs call Flag with custom parsers
 func TestParseArgsCustomFlag(t *testing.T) {
-	//We assume that getTypesRecursive works well
+	// We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	flagMap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagMap, ""); err != nil {
+		t.Fatal(err)
 	}
-	//init parsers
+
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -564,43 +605,48 @@ func TestParseArgsCustomFlag(t *testing.T) {
 	parsers[reflect.TypeOf(parse.Duration(time.Second))] = &durationParser
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
-	//init args
+
+	// init args
 	args := []string{
 		"--owner.servers=127.0.0.1",
 		"--owner.servers=1.0.0.1",
 	}
-	//test
-	valmap, err := parseArgs(args, flagmap, parsers)
+
+	// test
+	valMap, err := parseArgs(args, flagMap, parsers)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//check
+	// check
 	check := map[string]parse.Parser{}
 	checkOwnerServers := sliceServerValue{
 		ServerInfo{IP: "127.0.0.1"},
 		ServerInfo{IP: "1.0.0.1"},
 	}
 	check["owner.servers"] = &checkOwnerServers
-	if len(check) != len(valmap) {
-		t.Fatalf("Error, expected %d elements in valmap got %d", len(check), len(valmap))
+
+	if len(check) != len(valMap) {
+		t.Errorf("expected %d elements in valMap got %d", len(check), len(valMap))
 	}
-	for flag, parser := range valmap {
+
+	for flag, parser := range valMap {
 		if !reflect.DeepEqual(parser, check[flag]) {
-			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+			t.Errorf("Got %s expected %s\n", parser, check[flag])
 		}
 	}
 }
 
-//Test ParseArgs with all flags possible with custom parsers
+// Test ParseArgs with all flags possible with custom parsers
 func TestParseArgsAll(t *testing.T) {
-	//We assume that getTypesRecursive works well
+	// We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	flagMap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagMap, ""); err != nil {
+		t.Fatal(err)
 	}
-	//init parsers
+
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -622,7 +668,8 @@ func TestParseArgsAll(t *testing.T) {
 	parsers[reflect.TypeOf(parse.Duration(time.Second))] = &durationParser
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
-	//init args
+
+	// init args
 	args := []string{
 		"--loglevel=INFO",
 		"--timeout=1s",
@@ -639,13 +686,13 @@ func TestParseArgsAll(t *testing.T) {
 		"--owner.rate=0.222",
 		"--owner.servers=1.0.0.1",
 	}
-	//test
-	valmap, err := parseArgs(args, flagmap, parsers)
+	// test
+	valMap, err := parseArgs(args, flagMap, parsers)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//check
+	// check
 	check := map[string]parse.Parser{}
 	stringParser.SetValue("INFO")
 	check["loglevel"] = &stringParser
@@ -674,25 +721,27 @@ func TestParseArgsAll(t *testing.T) {
 		ServerInfo{IP: "1.0.0.1"},
 	}
 	check["owner.servers"] = &checkOwnerServers
-	if len(check) != len(valmap) {
-		t.Fatalf("Error, expected %d elements in valmap got %d", len(check), len(valmap))
+	if len(check) != len(valMap) {
+		t.Errorf("expected %d elements in valMap got %d", len(check), len(valMap))
 	}
-	for flag, parser := range valmap {
+	for flag, parser := range valMap {
 		if !reflect.DeepEqual(parser, check[flag]) {
-			t.Fatalf("Got %s expected %s\n", parser, check[flag])
+			t.Errorf("Got %s expected %s\n", parser, check[flag])
 		}
 	}
 }
 
 func TestParseArgsErrorNoParser(t *testing.T) {
-	//init config
+	// init config
 	config := &Configuration{}
-	//init valmap
-	flagmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+
+	// init valMap
+	flagMap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagMap, ""); err != nil {
+		t.Fatal(err)
 	}
-	//init parsers
+
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{}
 	var boolParser parse.BoolValue
 	parsers[reflect.TypeOf(true)] = &boolParser
@@ -712,34 +761,41 @@ func TestParseArgsErrorNoParser(t *testing.T) {
 	parsers[reflect.TypeOf(parse.Duration(time.Second))] = &durationParser
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
-	//init args
+
+	// init args
 	args := []string{"-lCONTINUE"}
-	//test
-	valmap, err := parseArgs(args, flagmap, parsers)
-	//check
+
+	// test
+	valMap, err := parseArgs(args, flagMap, parsers)
+
+	// check
 	if err != ErrParserNotFound {
-		t.Errorf("Expexted error %s\ngot %s", ErrParserNotFound, err)
+		t.Errorf("Expexted error '%v' got '%v'", ErrParserNotFound, err)
 	}
-	//check continue on error
+
+	// check continue on error
 	stringParser.SetValue("CONTINUE")
-	checkLoglevel := &stringParser
-	if !reflect.DeepEqual(valmap["loglevel"], checkLoglevel) {
-		t.Fatalf("Got %s expected %s\n", valmap["loglevel"], checkLoglevel)
+	checkLogLevel := &stringParser
+
+	if !reflect.DeepEqual(valMap["loglevel"], checkLogLevel) {
+		t.Errorf("Got %s expected %s\n", valMap["loglevel"], checkLogLevel)
 	}
 
 }
 
-//Test getDefaultValue on a full complex struct, with annonymous field, and not nil pointers
+// Test getDefaultValue on a full complex struct, with anonymous field, and not nil pointers
 func TestGetDefaultValueInitConfigAllDefault(t *testing.T) {
-	//INIT
+	// INIT
 	defPointerConfig := newDefaultPointersConfiguration()
 	config := newConfiguration()
-	defaultValmap := make(map[string]reflect.Value)
-	//TEST
-	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defPointerConfig), defaultValmap, ""); err != nil {
-		t.Fatalf("Error %s", err.Error())
+	defaultValMap := make(map[string]reflect.Value)
+
+	// TEST
+	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defPointerConfig), defaultValMap, ""); err != nil {
+		t.Fatal(err)
 	}
-	//CHECK
+
+	// CHECK
 	checkDefaultStr := "DefaultOwnerNamePointer"
 	checkDefaultDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
@@ -753,36 +809,34 @@ func TestGetDefaultValueInitConfigAllDefault(t *testing.T) {
 		"db.load64":          reflect.ValueOf(int64(64)),
 		"db.comax":           reflect.ValueOf(uint(3200000000)),
 		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
+		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
 		"owner.name":         reflect.ValueOf(&checkDefaultStr),
 		"owner.dob":          reflect.ValueOf(checkDob),
 		"owner.rate":         reflect.ValueOf(float64(0.999)),
 		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
 	}
-	if len(checkValue) != len(defaultValmap) {
-		t.Fatalf("Error, expected %d elements in defaultValmap got %d", len(checkValue), len(defaultValmap))
+
+	if len(checkValue) != len(defaultValMap) {
+		t.Errorf("expected %d elements in defaultValMap got %d", len(checkValue), len(defaultValMap))
 	}
 
-	for flag, val := range defaultValmap {
-		// fmt.Printf("%s : %+v\n", flag, val)
-		// if flag == "owner.name" {
-		// 	fmt.Printf("owner.name : result %s\n", val.Elem())
-		// }
+	for flag, val := range defaultValMap {
 		if !reflect.DeepEqual(checkValue[flag].Interface(), val.Interface()) {
-			t.Fatalf("Error flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], val)
-
+			t.Errorf("flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], val)
 		}
 	}
 }
 
-//Test getDefaultValue on a full complex struct, with annonymous field, nil pointers and not initialized fields
+// Test getDefaultValue on a full complex struct, with anonymous field, nil pointers and not initialized fields
 func TestGetDefaultValueNoConfigNoDefault(t *testing.T) {
 	config := &Configuration{}
 	defPointerConfig := &Configuration{}
-	defaultValmap := make(map[string]reflect.Value)
-	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defPointerConfig), defaultValmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	defaultValMap := make(map[string]reflect.Value)
+
+	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defPointerConfig), defaultValMap, ""); err != nil {
+		t.Fatal(err)
 	}
+
 	checkValue := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf(""),
 		"timeout":            reflect.ValueOf(parse.Duration(0)),
@@ -799,21 +853,22 @@ func TestGetDefaultValueNoConfigNoDefault(t *testing.T) {
 		"owner.rate":         reflect.ValueOf(float64(0)),
 		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
 	}
-	if len(checkValue) != len(defaultValmap) {
-		t.Fatalf("Error, expected %d elements in defaultValmap got %d", len(checkValue), len(defaultValmap))
+
+	if len(checkValue) != len(defaultValMap) {
+		t.Errorf("expected %d elements in defaultValMap got %d", len(checkValue), len(defaultValMap))
 	}
-	for flag, val := range defaultValmap {
-		// fmt.Printf("%s : %+v\n", flag, val)
+
+	for flag, val := range defaultValMap {
 		if !reflect.DeepEqual(checkValue[flag].Interface(), val.Interface()) {
-			t.Fatalf("Error flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], val)
+			t.Errorf("flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], val)
 		}
 	}
 }
 
-//Test getDefaultValue on a full complex struct, with annonymous field, nil pointers and not initialized fields
+// Test getDefaultValue on a full complex struct, with anonymous field, nil pointers and not initialized fields
 func TestGetDefaultValueInitConfigNoDefault(t *testing.T) {
 	config := &Configuration{
-		Name: "defaultName", //useless field not flaged
+		Name: "defaultName", // useless field not flaged
 		// LogLevel is not initialized, default value will be go default value : ""
 		Timeout: parse.Duration(time.Millisecond),
 	}
@@ -821,10 +876,12 @@ func TestGetDefaultValueInitConfigNoDefault(t *testing.T) {
 		Db: nil, //If pointer field is nil, default value will be go default value
 		// Owner is not initialized, default value will be go default value
 	}
-	defaultValmap := make(map[string]reflect.Value)
-	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defPointerConfig), defaultValmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	defaultValMap := make(map[string]reflect.Value)
+
+	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defPointerConfig), defaultValMap, ""); err != nil {
+		t.Fatal(err)
 	}
+
 	checkValue := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf(""),
 		"timeout":            reflect.ValueOf(parse.Duration(time.Millisecond)),
@@ -841,26 +898,28 @@ func TestGetDefaultValueInitConfigNoDefault(t *testing.T) {
 		"owner.rate":         reflect.ValueOf(float64(0)),
 		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
 	}
-	if len(checkValue) != len(defaultValmap) {
-		t.Fatalf("Error, expected %d elements in defaultValmap got %d", len(checkValue), len(defaultValmap))
+
+	if len(checkValue) != len(defaultValMap) {
+		t.Errorf("expected %d elements in defaultValMap got %d", len(checkValue), len(defaultValMap))
 	}
 
-	for flag, val := range defaultValmap {
-		// fmt.Printf("%s : %+v\n", flag, val)
+	for flag, val := range defaultValMap {
 		if !reflect.DeepEqual(checkValue[flag].Interface(), val.Interface()) {
-			t.Fatalf("Error flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], val)
+			t.Errorf("flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], val)
 		}
 	}
 }
 
-//Test getDefaultValue on a empty config but with default values on pointers
+// Test getDefaultValue on a empty config but with default values on pointers
 func TestGetDefaultNoConfigAllDefault(t *testing.T) {
 	config := &Configuration{}
 	defPointerConfig := newDefaultPointersConfiguration()
-	defaultValmap := make(map[string]reflect.Value)
-	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defPointerConfig), defaultValmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	defaultValMap := make(map[string]reflect.Value)
+
+	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defPointerConfig), defaultValMap, ""); err != nil {
+		t.Fatal(err)
 	}
+
 	checkStr := "DefaultOwnerNamePointer"
 	checkDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	checkValue := map[string]reflect.Value{
@@ -873,26 +932,25 @@ func TestGetDefaultNoConfigAllDefault(t *testing.T) {
 		"db.load64":          reflect.ValueOf(int64(64)),
 		"db.comax":           reflect.ValueOf(uint(3200000000)),
 		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: checkDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
+		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: checkDob, Rate: 0.111, Servers: []ServerInfo{{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
 		"owner.name":         reflect.ValueOf(&checkStr),
 		"owner.dob":          reflect.ValueOf(checkDob),
 		"owner.rate":         reflect.ValueOf(float64(0.111)),
-		"owner.servers":      reflect.ValueOf([]ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}),
+		"owner.servers":      reflect.ValueOf([]ServerInfo{{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}),
 	}
 
-	for flag, val := range defaultValmap {
-		// fmt.Printf("%s : %+v\n", flag, val)
+	for flag, val := range defaultValMap {
 		if !reflect.DeepEqual(checkValue[flag].Interface(), val.Interface()) {
-			t.Fatalf("Error flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], val)
+			t.Errorf("flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], val)
 		}
 	}
 }
 
-//Test fillStructRecursive on empty config with trivial valmap field and without default values on pointers
-func TestFillStructRecursiveNoConfigNoDefaultTrivialValmap(t *testing.T) {
+// Test fillStructRecursive on empty config with trivial valMap field and without default values on pointers
+func TestFillStructRecursiveNoConfigNoDefaultTrivialValMap(t *testing.T) {
 	config := &Configuration{}
 
-	//init parsers
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -915,15 +973,15 @@ func TestFillStructRecursiveNoConfigNoDefaultTrivialValmap(t *testing.T) {
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
-	//init valmap
-	valmap := map[string]parse.Parser{}
+	// init valMap
+	valMap := map[string]parse.Parser{}
 	stringParser.SetValue("INFO")
-	valmap["loglevel"] = &stringParser
+	valMap["loglevel"] = &stringParser
 	durationParser.SetValue(parse.Duration(time.Second))
-	valmap["timeout"] = &durationParser
+	valMap["timeout"] = &durationParser
 
-	//init defaultValmap NoConfigNoDefault
-	defaultValmap := map[string]reflect.Value{
+	// init defaultValMap NoConfigNoDefault
+	defaultValMap := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf(""),
 		"timeout":            reflect.ValueOf(parse.Duration(time.Duration(0))),
 		"db":                 reflect.ValueOf(&DatabaseInfo{}),
@@ -940,26 +998,25 @@ func TestFillStructRecursiveNoConfigNoDefaultTrivialValmap(t *testing.T) {
 		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
 	}
 
-	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	// test
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValMap, valMap, ""); err != nil {
+		t.Fatal(err)
 	}
 
-	//CHECK
-	// fmt.Printf("Got : %+v\n", config)
+	// CHECK
 	check := &Configuration{}
 	check.LogLevel = "INFO"
 	check.Timeout = parse.Duration(time.Second)
 	if !reflect.DeepEqual(config, check) {
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test fillStructRecursive on empty config with all valmap field but without default values on pointers
+// Test fillStructRecursive on empty config with all valmap field but without default values on pointers
 func TestFillStructRecursiveNoConfigNoDefaultAllValmap(t *testing.T) {
 	config := &Configuration{}
 
-	//init parsers
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -982,38 +1039,38 @@ func TestFillStructRecursiveNoConfigNoDefaultAllValmap(t *testing.T) {
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
-	//init valmap
-	valmap := map[string]parse.Parser{}
+	// init valMap
+	valMap := map[string]parse.Parser{}
 	stringParser.SetValue("INFO")
-	valmap["loglevel"] = &stringParser
+	valMap["loglevel"] = &stringParser
 	durationParser.SetValue(parse.Duration(time.Second))
-	valmap["timeout"] = &durationParser
+	valMap["timeout"] = &durationParser
 	boolParser.SetValue(true)
-	valmap["db"] = &boolParser
-	valmap["db.watch"] = &boolParser
+	valMap["db"] = &boolParser
+	valMap["db.watch"] = &boolParser
 	valmapDcIP := parse.StringValue("192.168.0.1")
-	valmap["db.ip"] = &valmapDcIP
+	valMap["db.ip"] = &valmapDcIP
 	intParser.SetValue(-1)
-	valmap["db.load"] = &intParser
+	valMap["db.load"] = &intParser
 	int64Parser.SetValue(int64(-164))
-	valmap["db.load64"] = &int64Parser
+	valMap["db.load64"] = &int64Parser
 	uintParser.SetValue(uint(2))
-	valmap["db.comax"] = &uintParser
+	valMap["db.comax"] = &uintParser
 	uint64Parser.SetValue(uint64(264))
-	valmap["db.connectionmax64"] = &uint64Parser
-	valmap["owner"] = &boolParser
-	valmap["owner.name"] = &boolParser
+	valMap["db.connectionmax64"] = &uint64Parser
+	valMap["owner"] = &boolParser
+	valMap["owner.name"] = &boolParser
 	timeParser.Set("2016-04-20T17:39:00Z")
-	valmap["owner.dob"] = &timeParser
+	valMap["owner.dob"] = &timeParser
 	float64Parser.SetValue(0.222)
-	valmap["owner.rate"] = &float64Parser
+	valMap["owner.rate"] = &float64Parser
 	valmapOwnerServers := sliceServerValue{
 		ServerInfo{IP: "1.0.0.1"},
 	}
-	valmap["owner.servers"] = &valmapOwnerServers
+	valMap["owner.servers"] = &valmapOwnerServers
 
-	//init defaultValmap NoConfigNoDefault
-	defaultValmap := map[string]reflect.Value{
+	// init defaultValMap NoConfigNoDefault
+	defaultValMap := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf(""),
 		"timeout":            reflect.ValueOf(parse.Duration(0)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{}),
@@ -1030,13 +1087,12 @@ func TestFillStructRecursiveNoConfigNoDefaultAllValmap(t *testing.T) {
 		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
 	}
 
-	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	// test
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValMap, valMap, ""); err != nil {
+		t.Fatal(err)
 	}
 
-	//CHECK
-	// fmt.Printf("Got : %+v\n", config)
+	// CHECK
 	checkDob, _ := time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 	check := &Configuration{
 		LogLevel: "INFO",
@@ -1055,20 +1111,20 @@ func TestFillStructRecursiveNoConfigNoDefaultAllValmap(t *testing.T) {
 			Name:        new(string),
 			DateOfBirth: checkDob,
 			Rate:        float64(0.222),
-			Servers:     []ServerInfo{ServerInfo{IP: "1.0.0.1"}},
+			Servers:     []ServerInfo{{IP: "1.0.0.1"}},
 		},
 	}
 
 	if !reflect.DeepEqual(config, check) {
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test fillStructRecursive on empty config without valmap and without default values pointers
+// Test fillStructRecursive on empty config without valmap and without default values pointers
 func TestFillStructRecursiveNoConfigAllDefaultNoValmap(t *testing.T) {
 	config := &Configuration{}
 
-	//init parsers
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -1091,13 +1147,13 @@ func TestFillStructRecursiveNoConfigAllDefaultNoValmap(t *testing.T) {
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
-	//init valmap
-	valmap := map[string]parse.Parser{}
+	// init valMap
+	valMap := map[string]parse.Parser{}
 
-	//init defaultValmap NoConfigAllDefault
+	// init defaultValMap NoConfigAllDefault
 	defaultStr := "DefaultOwnerNamePointer"
 	defaultDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
-	defaultValmap := map[string]reflect.Value{
+	defaultValMap := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf(""),
 		"timeout":            reflect.ValueOf(parse.Duration(0)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
@@ -1107,30 +1163,29 @@ func TestFillStructRecursiveNoConfigAllDefaultNoValmap(t *testing.T) {
 		"db.load64":          reflect.ValueOf(int64(64)),
 		"db.comax":           reflect.ValueOf(uint(3200000000)),
 		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: defaultDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
+		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: defaultDob, Rate: 0.111, Servers: []ServerInfo{{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
 		"owner.name":         reflect.ValueOf(&defaultStr),
 		"owner.dob":          reflect.ValueOf(defaultDob),
 		"owner.rate":         reflect.ValueOf(float64(0.111)),
-		"owner.servers":      reflect.ValueOf([]ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}),
+		"owner.servers":      reflect.ValueOf([]ServerInfo{{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}),
 	}
-	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	// test
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValMap, valMap, ""); err != nil {
+		t.Fatal(err)
 	}
 
-	//CHECK
-	// fmt.Printf("Got : %+v\n", config)
+	// CHECK
 	check := &Configuration{}
 	if !reflect.DeepEqual(config, check) {
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test fillStructRecursive on not-empty config with default values on pointers but without valmap field
+// Test fillStructRecursive on not-empty config with default values on pointers but without valmap field
 func TestFillStructRecursiveInitConfigAllDefaultNoValmap(t *testing.T) {
 	config := newConfiguration()
 
-	//init parsers
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -1153,14 +1208,14 @@ func TestFillStructRecursiveInitConfigAllDefaultNoValmap(t *testing.T) {
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
-	//init valmap
-	valmap := map[string]parse.Parser{}
+	// init valMap
+	valMap := map[string]parse.Parser{}
 
-	//init defaultValmap InitConfigAllDefault from TestGetDefaultValueAll
+	// init defaultValMap InitConfigAllDefault from TestGetDefaultValueAll
 	checkDefaultStr := "DefaultOwnerNamePointer"
 	checkDefaultDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
-	defaultValmap := map[string]reflect.Value{
+	defaultValMap := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf("DEBUG"),
 		"timeout":            reflect.ValueOf(parse.Duration(time.Second)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
@@ -1170,35 +1225,35 @@ func TestFillStructRecursiveInitConfigAllDefaultNoValmap(t *testing.T) {
 		"db.load64":          reflect.ValueOf(int64(64)),
 		"db.comax":           reflect.ValueOf(uint(3200000000)),
 		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
+		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
 		"owner.name":         reflect.ValueOf(&checkDefaultStr),
 		"owner.dob":          reflect.ValueOf(checkDob),
 		"owner.rate":         reflect.ValueOf(float64(0.999)),
 		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
 	}
 
-	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	// test
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValMap, valMap, ""); err != nil {
+		t.Fatal(err)
 	}
 
-	//CHECK
+	// CHECK
 	// fmt.Printf("Got : %+v\n", config)
 	check := newConfiguration()
 
 	if !reflect.DeepEqual(config, check) {
 		if !reflect.DeepEqual(config.Owner, check.Owner) {
-			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+			t.Errorf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
 		}
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test fillStructRecursive on empty config with only pointer valmap field and with default values on pointers
+// Test fillStructRecursive on empty config with only pointer valmap field and with default values on pointers
 func TestFillStructRecursiveInitConfigAllDefaultPointerValmap(t *testing.T) {
 	config := &Configuration{}
 
-	//init parsers
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -1221,17 +1276,17 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerValmap(t *testing.T) {
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
-	//init valmap
-	valmap := map[string]parse.Parser{}
+	// init valMap
+	valMap := map[string]parse.Parser{}
 	boolParser.SetValue(true)
-	valmap["db"] = &boolParser
-	valmap["owner"] = &boolParser
+	valMap["db"] = &boolParser
+	valMap["owner"] = &boolParser
 
-	//init defaultValmap InitConfigAllDefault from TestGetDefaultValueAll
+	// init defaultValMap InitConfigAllDefault from TestGetDefaultValueAll
 	checkDefaultStr := "DefaultOwnerNamePointer"
 	checkDefaultDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
-	defaultValmap := map[string]reflect.Value{
+	defaultValMap := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf("DEBUG"),
 		"timeout":            reflect.ValueOf(parse.Duration(time.Second)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
@@ -1241,20 +1296,19 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerValmap(t *testing.T) {
 		"db.load64":          reflect.ValueOf(int64(64)),
 		"db.comax":           reflect.ValueOf(uint(3200000000)),
 		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
+		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
 		"owner.name":         reflect.ValueOf(&checkDefaultStr),
 		"owner.dob":          reflect.ValueOf(checkDob),
 		"owner.rate":         reflect.ValueOf(float64(0.999)),
 		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
 	}
 
-	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	// test
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValMap, valMap, ""); err != nil {
+		t.Fatal(err)
 	}
 
-	//CHECK
-
+	// CHECK
 	check := &Configuration{
 		Db: &DatabaseInfo{
 			ServerInfo:      ServerInfo{true, "192.168.1.2", 32, 64},
@@ -1266,9 +1320,9 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerValmap(t *testing.T) {
 			DateOfBirth: checkDefaultDob,
 			Rate:        0.111,
 			Servers: []ServerInfo{
-				ServerInfo{IP: "192.168.1.2"},
-				ServerInfo{IP: "192.168.1.3"},
-				ServerInfo{IP: "192.168.1.4"},
+				{IP: "192.168.1.2"},
+				{IP: "192.168.1.3"},
+				{IP: "192.168.1.4"},
 			},
 		},
 	}
@@ -1277,15 +1331,15 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerValmap(t *testing.T) {
 		fmt.Printf("expected\t: %+v\ngot\t\t\t: %+v\n", check.Db, config.Db)
 		fmt.Printf("expected\t: %+v\ngot\t\t\t: %+v\n", check.Owner, config.Owner)
 
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test fillStructRecursive on not-empty struc with only one pointer under pointer valmap field and with default values on pointers
+// Test fillStructRecursive on not-empty struc with only one pointer under pointer valmap field and with default values on pointers
 func TestFillStructRecursiveInitConfigAllDefaultPointerUnderPointerValmap(t *testing.T) {
 	config := newConfiguration()
 
-	//init parsers
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -1308,17 +1362,16 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerUnderPointerValmap(t *tes
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
-	//init valmap
-	valmap := map[string]parse.Parser{}
+	// init valMap
+	valMap := map[string]parse.Parser{}
 	boolParser.SetValue(true)
-	valmap["owner.name"] = &boolParser
-	// valmap["owner.name"] = &boolParser
+	valMap["owner.name"] = &boolParser
 
-	//init defaultValmap InitConfigAllDefault from TestGetDefaultValueAll
+	// init defaultValMap InitConfigAllDefault from TestGetDefaultValueAll
 	checkDefaultStr := "DefaultOwnerNamePointer"
 	checkDefaultDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
-	defaultValmap := map[string]reflect.Value{
+	defaultValMap := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf("DEBUG"),
 		"timeout":            reflect.ValueOf(parse.Duration(time.Second)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
@@ -1328,19 +1381,19 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerUnderPointerValmap(t *tes
 		"db.load64":          reflect.ValueOf(int64(64)),
 		"db.comax":           reflect.ValueOf(uint(3200000000)),
 		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
+		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
 		"owner.name":         reflect.ValueOf(&checkDefaultStr),
 		"owner.dob":          reflect.ValueOf(checkDob),
 		"owner.rate":         reflect.ValueOf(float64(0.999)),
 		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
 	}
 
-	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	// test
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValMap, valMap, ""); err != nil {
+		t.Fatal(err)
 	}
 
-	//CHECK
+	// CHECK
 	check := &Configuration{
 		Name:     "initName",
 		LogLevel: "DEBUG",
@@ -1351,19 +1404,20 @@ func TestFillStructRecursiveInitConfigAllDefaultPointerUnderPointerValmap(t *tes
 			Rate:        0.999,
 		},
 	}
+
 	if !reflect.DeepEqual(config, check) {
 		fmt.Printf("expected\t: %+v\ngot\t\t\t: %+v\n", check.Db, config.Db)
 		fmt.Printf("expected\t: %+v\ngot\t\t\t: %+v\n", check.Owner, config.Owner)
 		fmt.Printf("expected\t: %+v\tgot\t\t\t: %+v\n", *check.Owner.Name, *config.Owner.Name)
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test fillStructRecursive on empty config with some random valmap field and with default values on pointers
+// Test fillStructRecursive on empty config with some random valmap field and with default values on pointers
 func TestFillStructRecursiveNoConfigAllDefaultSomeValmap(t *testing.T) {
 	config := &Configuration{}
 
-	//init parsers
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -1386,21 +1440,21 @@ func TestFillStructRecursiveNoConfigAllDefaultSomeValmap(t *testing.T) {
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
 
-	//init valmap
-	valmap := map[string]parse.Parser{}
+	// init valMap
+	valMap := map[string]parse.Parser{}
 	durationParser.SetValue(5 * parse.Duration(time.Second))
-	valmap["timeout"] = &durationParser
+	valMap["timeout"] = &durationParser
 	boolParser.SetValue(true)
-	valmap["db"] = &boolParser
+	valMap["db"] = &boolParser
 	timeParser.Set("2016-04-20T17:39:00Z")
-	valmap["owner.dob"] = &timeParser
+	valMap["owner.dob"] = &timeParser
 	float64Parser.SetValue(0.222)
-	valmap["owner.rate"] = &float64Parser
+	valMap["owner.rate"] = &float64Parser
 
-	//init defaultValmap NoConfigAllDefault
+	// init defaultValMap NoConfigAllDefault
 	defaultStr := "DefaultOwnerNamePointer"
 	defaultDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
-	defaultValmap := map[string]reflect.Value{
+	defaultValMap := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf(""),
 		"timeout":            reflect.ValueOf(parse.Duration(0)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
@@ -1410,19 +1464,18 @@ func TestFillStructRecursiveNoConfigAllDefaultSomeValmap(t *testing.T) {
 		"db.load64":          reflect.ValueOf(int64(64)),
 		"db.comax":           reflect.ValueOf(uint(3200000000)),
 		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: defaultDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
+		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: defaultDob, Rate: 0.111, Servers: []ServerInfo{{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
 		"owner.name":         reflect.ValueOf(&defaultStr),
 		"owner.dob":          reflect.ValueOf(defaultDob),
 		"owner.rate":         reflect.ValueOf(float64(0.111)),
-		"owner.servers":      reflect.ValueOf([]ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}),
+		"owner.servers":      reflect.ValueOf([]ServerInfo{{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}),
 	}
-	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	// test
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValMap, valMap, ""); err != nil {
+		t.Fatal(err)
 	}
 
-	//CHECK
-	// fmt.Printf("Got : %+v\n", config)
+	// CHECK
 	check := &Configuration{}
 	check.Timeout = 5 * parse.Duration(time.Second)
 	check.Db = newDefaultPointersConfiguration().Db
@@ -1432,37 +1485,38 @@ func TestFillStructRecursiveNoConfigAllDefaultSomeValmap(t *testing.T) {
 	check.Owner.Name = nil
 	if !reflect.DeepEqual(config, check) {
 		if !reflect.DeepEqual(config.Owner, check.Owner) {
-			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+			t.Errorf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
 		}
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test fillStructRecursive with repeated struct (with one on root)
+// Test fillStructRecursive with repeated struct (with one on root)
 func TestFillStructRecursiveWithRepeatedPtrStruct(t *testing.T) {
 	config := &ConfigurationWithRepeatedStruct{}
 
-	//init parsers
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{}
 	var stringParser parse.StringValue
 	parsers[reflect.TypeOf("")] = &stringParser
 
-	//init valmap
-	valmap := map[string]parse.Parser{}
+	// init valMap
+	valMap := map[string]parse.Parser{}
 	stringParser.SetValue("test")
-	valmap["container.repeated.val"] = &stringParser
+	valMap["container.repeated.val"] = &stringParser
 
-	//init defaultValmap NoConfigAllDefault
-	defaultValmap := map[string]reflect.Value{
+	// init defaultValMap NoConfigAllDefault
+	defaultValMap := map[string]reflect.Value{
 		"repeated":  reflect.ValueOf(&RepeatedStruct{Val: "Default"}),
 		"container": reflect.ValueOf(&RepeatedStructContainer{&RepeatedStruct{Val: "DefaultInContainer"}}),
 	}
-	//test
-	if err := fillStructRecursive(reflect.ValueOf(config), defaultValmap, valmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+
+	// test
+	if err := fillStructRecursive(reflect.ValueOf(config), defaultValMap, valMap, ""); err != nil {
+		t.Fatal(err)
 	}
 
-	//CHECK
+	// CHECK
 	check := &ConfigurationWithRepeatedStruct{}
 	check.Container = &RepeatedStructContainer{
 		&RepeatedStruct{
@@ -1471,84 +1525,76 @@ func TestFillStructRecursiveWithRepeatedPtrStruct(t *testing.T) {
 	}
 	if !reflect.DeepEqual(config, check) {
 		if !reflect.DeepEqual(config.Container, check.Container) {
-			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Container, config.Container)
+			t.Errorf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Container, config.Container)
 		}
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test LoadWithParsers on not empty config without default values on pointers and without flag called
+// Test LoadWithParsers on not empty config without default values on pointers and without flag called
 func TestLoadWithParsersInitConfigNoDefaultNoFlag(t *testing.T) {
-	//INIT
-	//init config
+	// INIT
 	config := newConfiguration()
-	//init default pointers
 	defaultPointers := &Configuration{}
-	//init custom parsers
+
 	customParsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
-	//init args
-	args := []string{}
 
-	//TEST
+	var args []string
+
+	// TEST
 	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//CHECK
-	// fmt.Printf("Got : %+v\n", config)
+	// CHECK
 	check := newConfiguration()
 	if !reflect.DeepEqual(config, check) {
 		if !reflect.DeepEqual(config.Owner, check.Owner) {
-			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+			t.Errorf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
 		}
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test LoadWithParsers on not empty config with all default values on pointers and without flag called
+// Test LoadWithParsers on not empty config with all default values on pointers and without flag called
 func TestLoadWithParsersInitConfigAllDefaultNoFlag(t *testing.T) {
-	//INIT
-	//init config
+	// INIT
 	config := newConfiguration()
-	//init default pointers
 	defaultPointers := newDefaultPointersConfiguration()
-	//init custom parsers
+
 	customParsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
-	//init args
-	args := []string{}
 
-	//TEST
+	var args []string
+
+	// TEST
 	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//CHECK
-	// fmt.Printf("Got : %+v\n", config)
+	// CHECK
 	check := newConfiguration()
 	if !reflect.DeepEqual(config, check) {
 		if !reflect.DeepEqual(config.Owner, check.Owner) {
-			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+			t.Errorf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
 		}
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test LoadWithParsers on not empty config without default values on pointers and with all flags called
+// Test LoadWithParsers on not empty config without default values on pointers and with all flags called
 func TestLoadWithParsersInitConfigNoDefaultAllFlag(t *testing.T) {
-	//INIT
-	//init config
+	// INIT
 	config := newConfiguration()
-	//init default pointers
 	defaultPointers := &Configuration{}
-	//init custom parsers
+
 	customParsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
-	//init args
+
 	args := []string{
 		"--loglevel=INFO",
 		"--timeout=1s",
@@ -1566,13 +1612,12 @@ func TestLoadWithParsersInitConfigNoDefaultAllFlag(t *testing.T) {
 		"--owner.servers=1.0.0.1",
 	}
 
-	//TEST
+	// TEST
 	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//CHECK
-	// fmt.Printf("Got : %+v\n", config)
+	// CHECK
 	checkDob, _ := time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 	check := &Configuration{
 		Name:     "initName",
@@ -1592,30 +1637,28 @@ func TestLoadWithParsersInitConfigNoDefaultAllFlag(t *testing.T) {
 			Name:        new(string),
 			DateOfBirth: checkDob,
 			Rate:        float64(0.222),
-			Servers:     []ServerInfo{ServerInfo{IP: "1.0.0.1"}},
+			Servers:     []ServerInfo{{IP: "1.0.0.1"}},
 		},
 	}
 
 	if !reflect.DeepEqual(config, check) {
 		if !reflect.DeepEqual(config.Owner, check.Owner) {
-			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+			t.Errorf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
 		}
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test LoadWithParsers on not empty config with all default values on pointers and with some flags called
+// Test LoadWithParsers on not empty config with all default values on pointers and with some flags called
 func TestLoadWithParsersInitConfigAllDefaultSomeFlag(t *testing.T) {
-	//INIT
-	//init config
+	// INIT
 	config := newConfiguration()
-	//init default pointers
 	defaultPointers := newDefaultPointersConfiguration()
-	//init custom parsers
+
 	customParsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
-	//init args
+
 	args := []string{
 		"--loglevel=INFO",
 		"--db",
@@ -1623,14 +1666,12 @@ func TestLoadWithParsersInitConfigAllDefaultSomeFlag(t *testing.T) {
 		"--owner.dob=2016-04-20T17:39:00Z",
 	}
 
-	//TEST
+	// TEST
 	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//CHECK
-	// fmt.Printf("Got : %+v\n", config)
-
+	// CHECK
 	check := newConfiguration()
 	check.LogLevel = "INFO"
 	check.Db = newDefaultPointersConfiguration().Db
@@ -1639,38 +1680,34 @@ func TestLoadWithParsersInitConfigAllDefaultSomeFlag(t *testing.T) {
 
 	if !reflect.DeepEqual(config, check) {
 		if !reflect.DeepEqual(config.Owner, check.Owner) {
-			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+			t.Errorf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
 		}
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test LoadWithParsers on empty config with all default values on pointers and with some flags called
+// Test LoadWithParsers on empty config with all default values on pointers and with some flags called
 func TestLoadWithParsersNoConfigAllDefaultSomeFlag(t *testing.T) {
-	//INIT
-	//init config
+	// INIT
 	config := &Configuration{}
-	//init default pointers
 	defaultPointers := newDefaultPointersConfiguration()
-	//init custom parsers
+
 	customParsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
-	//init args
+
 	args := []string{
 		"--loglevel=INFO",
 		"--db=FALSE",
 		"--owner.dob=2016-04-20T17:39:00Z",
 	}
 
-	//TEST
+	// TEST
 	if err := LoadWithParsers(config, defaultPointers, args, customParsers); err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//CHECK
-	// fmt.Printf("Got : %+v\n", config)
-
+	// CHECK
 	check := newDefaultPointersConfiguration()
 	check.LogLevel = "INFO"
 	check.Db = nil
@@ -1679,21 +1716,18 @@ func TestLoadWithParsersNoConfigAllDefaultSomeFlag(t *testing.T) {
 
 	if !reflect.DeepEqual(config, check) {
 		if !reflect.DeepEqual(config.Owner, check.Owner) {
-			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+			t.Errorf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
 		}
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test Load without parsers on not empty config with all default values on pointers and with some flags called
+// Test Load without parsers on not empty config with all default values on pointers and with some flags called
 func TestLoadInitConfigAllDefaultSomeFlagErrorParser(t *testing.T) {
-	//INIT
-	//init config
+	// INIT
 	config := newConfiguration()
-	//init default pointers
 	defaultPointers := newDefaultPointersConfiguration()
 
-	//init args
 	args := []string{
 		"--loglevel=INFO",
 		"--db",
@@ -1706,17 +1740,21 @@ func TestLoadInitConfigAllDefaultSomeFlagErrorParser(t *testing.T) {
 	_, w, _ := os.Pipe()
 	os.Stdout = w
 
-	//TEST
+	// TEST
 	err := Load(config, defaultPointers, args)
 	if err != ErrParserNotFound {
 		t.Errorf("Expexted error %s\ngot %s", ErrParserNotFound, err)
 	}
 
 	// read and restore stdout
-	w.Close()
+	err = w.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	os.Stdout = rescueStdout
 
-	//check contunue on error
+	// check continue on error
 	check := newConfiguration()
 	check.LogLevel = "INFO"
 	check.Db = newDefaultPointersConfiguration().Db
@@ -1725,21 +1763,22 @@ func TestLoadInitConfigAllDefaultSomeFlagErrorParser(t *testing.T) {
 
 	if !reflect.DeepEqual(config, check) {
 		if !reflect.DeepEqual(config.Owner, check.Owner) {
-			t.Fatalf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
+			t.Errorf("\nexpected\t: %+v\ngot\t\t\t: %+v", check.Owner, config.Owner)
 		}
-		t.Fatalf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+		t.Errorf("Error :\nexpected \t%+v \ngot \t\t%+v\n", check, config)
 	}
 }
 
-//Test Parse Args Error with an invalid argument
+// Test Parse Args Error with an invalid argument
 func TestParseArgsInvalidArgument(t *testing.T) {
-	//We assume that getTypesRecursive works well
+	// We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	flagMap := make(map[string]reflect.StructField)
+	if err := getTypesRecursive(reflect.ValueOf(config), flagMap, ""); err != nil {
+		t.Fatal(err)
 	}
-	//init parsers
+
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -1761,27 +1800,30 @@ func TestParseArgsInvalidArgument(t *testing.T) {
 	parsers[reflect.TypeOf(parse.Duration(time.Second))] = &durationParser
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
-	//init args
+
+	// init args
 	args := []string{
 		"--timeout=ItsAnError",
 	}
 
-	//Test
+	// Test
 	checkErr := "invalid argument"
-	if _, err := parseArgs(args, flagmap, parsers); err == nil || !strings.Contains(err.Error(), checkErr) {
+	if _, err := parseArgs(args, flagMap, parsers); err == nil || !strings.Contains(err.Error(), checkErr) {
 		t.Errorf("Expected Error : invalid argument got Error : %s", err)
 	}
 }
 
-//Test Parse Args Error with an unknown flag
+// Test Parse Args Error with an unknown flag
 func TestParseArgsErrorUnknownFlag(t *testing.T) {
-	//We assume that getTypesRecursive works well
+	// We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	flagMap := make(map[string]reflect.StructField)
+
+	if err := getTypesRecursive(reflect.ValueOf(config), flagMap, ""); err != nil {
+		t.Fatal(err)
 	}
-	//init parsers
+
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -1803,25 +1845,29 @@ func TestParseArgsErrorUnknownFlag(t *testing.T) {
 	parsers[reflect.TypeOf(parse.Duration(time.Second))] = &durationParser
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
-	//init args
+
+	// init args
 	args := []string{
 		"--unknownFlag",
 	}
-	//Test
-	if _, err := parseArgs(args, flagmap, parsers); err == nil || !strings.Contains(err.Error(), "unknown flag") {
+
+	// Test
+	if _, err := parseArgs(args, flagMap, parsers); err == nil || !strings.Contains(err.Error(), "unknown flag") {
 		t.Errorf("Expected Error : unknown flag got Error : %s", err)
 	}
 }
 
-//Test Print Error with an invalid argument
+// Test Print Error with an invalid argument
 func TestPrintErrorInvalidArgument(t *testing.T) {
-	//We assume that getTypesRecursive works well
+	// We assume that getTypesRecursive works well
 	config := newConfiguration()
-	flagmap := make(map[string]reflect.StructField)
-	if err := getTypesRecursive(reflect.ValueOf(config), flagmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	flagMap := make(map[string]reflect.StructField)
+
+	if err := getTypesRecursive(reflect.ValueOf(config), flagMap, ""); err != nil {
+		t.Fatal(err)
 	}
-	//init parsers
+
+	// init parsers
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf([]ServerInfo{}): &sliceServerValue{},
 	}
@@ -1843,15 +1889,17 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 	parsers[reflect.TypeOf(parse.Duration(time.Second))] = &durationParser
 	var timeParser parse.TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
-	//init args
+
+	// init args
 	args := []string{
 		"--timeout=ItsAnError",
 	}
-	//init defaultValmap
+
+	// init defaultValMap
 	checkDefaultStr := "DefaultOwnerNamePointer"
 	checkDefaultDob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
 	checkDob, _ := time.Parse(time.RFC3339, "1993-09-12T07:32:00Z")
-	defaultValmap := map[string]reflect.Value{
+	defaultValMap := map[string]reflect.Value{
 		"loglevel":           reflect.ValueOf("DEBUG"),
 		"timeout":            reflect.ValueOf(parse.Duration(time.Second)),
 		"db":                 reflect.ValueOf(&DatabaseInfo{ServerInfo: ServerInfo{Watch: true, IP: "192.168.1.2", Load: 32, Load64: 64}, ConnectionMax: 3200000000, ConnectionMax64: 6400000000000000000}),
@@ -1861,7 +1909,7 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 		"db.load64":          reflect.ValueOf(int64(64)),
 		"db.comax":           reflect.ValueOf(uint(3200000000)),
 		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(&OwnerInfo{Name: &checkDefaultStr, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
+		"owner":              reflect.ValueOf(&OwnerInfo{Name: &checkDefaultStr, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, {Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
 		"owner.name":         reflect.ValueOf(&checkDefaultStr),
 		"owner.dob":          reflect.ValueOf(checkDob),
 		"owner.rate":         reflect.ValueOf(float64(0.999)),
@@ -1873,36 +1921,36 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	//Test
+	// Test
 	checkErr := "invalid argument"
-	_, err := parseArgs(args, flagmap, parsers)
+	_, err := parseArgs(args, flagMap, parsers)
 	if err != nil && strings.Contains(err.Error(), checkErr) {
-		PrintError(err, flagmap, defaultValmap, parsers)
+		PrintError(err, flagMap, defaultValMap, parsers)
 	} else {
 		t.Errorf("Expected Error : invalid argument got Error : %s", err)
 	}
 
 	// read and restore stdout
-	w.Close()
+	err = w.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = rescueStdout
 
-	//check
+	// check
 	if !strings.Contains(string(out), checkErr) {
 		t.Errorf("Expexted error %s\ngot %s", checkErr, out)
 	}
-
 }
 
-//Test Commands feature with only the root command
+// Test Commands feature with only the root command
 func TestFlaegCommandRootInitConfigAllDefaultSomeFlag(t *testing.T) {
-	//INIT
-	//init config
+	// INIT
 	config := newConfiguration()
-	//init default pointers
 	defaultPointers := newDefaultPointersConfiguration()
 
-	//init args
 	args := []string{
 		"--loglevel=INFO",
 		"--db",
@@ -1910,17 +1958,14 @@ func TestFlaegCommandRootInitConfigAllDefaultSomeFlag(t *testing.T) {
 		"--owner.dob=2016-04-20T17:39:00Z",
 	}
 
-	//init command
+	// init command
 	rootCmd := &Command{
 		Name: "flaegtest",
 		Description: `flaegtest is a test program made to to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
-
 		Config:                config,
 		DefaultPointersConfig: defaultPointers,
-		//test in run
 		Run: func() error {
-			// fmt.Printf("Run with config :\n%+v\n", config)
 			//CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
@@ -1929,56 +1974,48 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
 			if !reflect.DeepEqual(config, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+				msg := fmt.Sprintf("\nexpected \t%+v \ngot \t\t%+v\n", check, config)
+				return errors.New(msg)
 			}
 			return nil
 		},
 	}
 
-	//TEST
-	//init flaeg
+	// TEST
+	// init flaeg
 	flaeg := New(rootCmd, args)
-	//add custom parser to fleag
+	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
 
-	//run test
+	// run test
 	if err := flaeg.Run(); err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 }
 
-//Version Config
+// Version Config
 type VersionConfig struct {
 	Version string `short:"v" description:"Version"`
 }
 
-//Test Commands feature with root and version commands
+// Test Commands feature with root and version commands
 func TestCommandVersionInitConfigNoDefaultNoFlag(t *testing.T) {
-	//INIT
-	//init root config
+	// INIT
 	rootConfig := newConfiguration()
-	//init root default pointers
 	rootDefaultPointers := newDefaultPointersConfiguration()
-	//init version config
 	versionConfig := &VersionConfig{"0.1"}
 
-	//init args
 	args := []string{
-		// "--toto",  //it now has effect
-		"version", //call Command
-		// "-v0.2",
+		"version", // call Command
 	}
 
-	//init commands
-	//root command
+	// root command
 	rootCmd := &Command{
 		Name: "flaegtest",
 		Description: `flaegtest is a test program made to to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
-
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
-		//test in run
 		Run: func() error {
 			fmt.Printf("Run with config :\n%+v\n", rootConfig)
 			//CHECK
@@ -1989,71 +2026,61 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
 			if !reflect.DeepEqual(rootConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				msg := fmt.Sprintf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				return errors.New(msg)
 			}
 			return nil
 		},
 	}
-	//vesion command
-	VersionConfig := &Command{
-		Name:        "version",
-		Description: `Print version`,
 
+	// version command
+	VersionConfig := &Command{
+		Name:                  "version",
+		Description:           `Print version`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
-		//test in run
 		Run: func() error {
-			// fmt.Printf("Version %s \n", versionConfig.Version)
 			//CHECK
 			if versionConfig.Version != "0.1" {
 				return fmt.Errorf("expected 0.1 got %s", versionConfig.Version)
 			}
 			return nil
-
 		},
 	}
 
-	//TEST
-	//init flaeg
+	// TEST
+	// init flaeg
 	flaeg := New(rootCmd, args)
-	//add custom parser to fleag
+	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
-	//add command Version
+	// add command Version
 	flaeg.AddCommand(VersionConfig)
 
-	//run test
+	// run test
 	if err := flaeg.Run(); err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 }
 
-//Test Commands feature with root and version commands
+// Test Commands feature with root and version commands
 func TestCommandVersionInitConfigNoDefaultAllFlag(t *testing.T) {
-	//INIT
-	//init root config
+	// INIT
 	rootConfig := newConfiguration()
-	//init root default pointers
 	rootDefaultPointers := newDefaultPointersConfiguration()
-	//init version config
 	versionConfig := &VersionConfig{"0.1"}
 
-	//init args
 	args := []string{
-		// "--toto",  //it now has effect
-		"version", //call Command
+		"version", // call Command
 		"-v2.2beta",
 	}
 
-	//init commands
-	//root command
+	// root command
 	rootCmd := &Command{
 		Name: "flaegtest",
 		Description: `flaegtest is a test program made to to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
-
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
-		//test in run
 		Run: func() error {
 			fmt.Printf("Run with config :\n%+v\n", rootConfig)
 			//CHECK
@@ -2064,73 +2091,63 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
 			if !reflect.DeepEqual(rootConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				msg := fmt.Sprintf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				return errors.New(msg)
 			}
 			return nil
 		},
 	}
-	//vesion command
-	VersionConfig := &Command{
-		Name:        "version",
-		Description: `Print version`,
 
+	// version command
+	VersionConfig := &Command{
+		Name:                  "version",
+		Description:           `Print version`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
-		//test in run
 		Run: func() error {
-			// fmt.Printf("Version %s \n", versionConfig.Version)
 			//CHECK
 			if versionConfig.Version != "2.2beta" {
 				return fmt.Errorf("expected 2.2beta got %s", versionConfig.Version)
 			}
 			return nil
-
 		},
 	}
 
-	//TEST
-	//init flaeg
+	// TEST
+	// init flaeg
 	flaeg := New(rootCmd, args)
-	//add custom parser to fleag
+	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
-	//add command Version
+	// add command Version
 	flaeg.AddCommand(VersionConfig)
 
-	//run test
+	// run test
 	if err := flaeg.Run(); err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 }
 
-//Test Commands feature with root and version commands
+// Test Commands feature with root and version commands
 func TestCommandVersionInitConfigNoDefaultCommandHelpFlag(t *testing.T) {
-	//INIT
-	//init root config
+	// INIT
 	rootConfig := newConfiguration()
-	//init root default pointers
 	rootDefaultPointers := newDefaultPointersConfiguration()
-	//init version config
 	versionConfig := &VersionConfig{"0.1"}
-
-	//init args
 	args := []string{
-		// "--toto",  //it now has effect
-		"version", //call Command
+		"version", // call Command
 		"-h",
 	}
 
-	//init commands
-	//root command
+	// root command
 	rootCmd := &Command{
 		Name: "flaegtest",
 		Description: `flaegtest is a test program made to to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
-
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
-		//test in run
 		Run: func() error {
 			fmt.Printf("Run with config :\n%+v\n", rootConfig)
+
 			//CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
@@ -2139,31 +2156,31 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
 			if !reflect.DeepEqual(rootConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				msg := fmt.Sprintf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				return errors.New(msg)
 			}
 			return nil
 		},
 	}
-	//vesion command
-	VersionConfig := &Command{
-		Name:        "version",
-		Description: `Print version`,
 
+	// version command
+	VersionConfig := &Command{
+		Name:                  "version",
+		Description:           `Print version`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
-		//test in run
 		Run: func() error {
 			fmt.Printf("Version %s \n", versionConfig.Version)
 			return nil
 		},
 	}
 
-	//TEST
-	//init flaeg
+	// TEST
+	// init flaeg
 	flaeg := New(rootCmd, args)
-	//add custom parser to fleag
+	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
-	//add command Version
+	// add command Version
 	flaeg.AddCommand(VersionConfig)
 
 	// catch stdout
@@ -2172,105 +2189,91 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	os.Stdout = w
 
 	checkErr := "help requested"
-	//run test
+	// run test
 	if err := flaeg.Run(); err == nil || !strings.Contains(err.Error(), checkErr) {
-		t.Errorf("Expected Error :help requested got Error : %s", err)
+		t.Errorf("Expected Error :help requested got Error : %v", err)
 	}
 
 	// read and restore stdout
-	w.Close()
+	err := w.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
 	os.Stdout = rescueStdout
 }
 
-//Test Commands feature with root and version commands
+// Test Commands feature with root and version commands
 func TestSeveralCommandsDashArg(t *testing.T) {
-	//INIT
-	//init root config
+	// INIT
 	rootConfig := newConfiguration()
-	//init root default pointers
 	rootDefaultPointers := newDefaultPointersConfiguration()
-	//init version config
 	versionConfig := &VersionConfig{"0.1"}
-
-	//init args
 	args := []string{
 		"-", //dash arg
 	}
 
-	//init commands
-	//root command
+	// root command
 	rootCmd := &Command{
 		Name: "flaegtest",
 		Description: `flaegtest is a test program made to to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
-
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
-		//test in run
 		Run: func() error {
-			// fmt.Printf("Run with config :\n%+v\n", rootConfig)
-			//CHECK
+			// CHECK
 			check := newConfiguration()
 
 			if !reflect.DeepEqual(rootConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				msg := fmt.Sprintf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				return errors.New(msg)
 			}
 			return nil
 		},
 	}
-	//vesion command
-	VersionConfig := &Command{
-		Name:        "version",
-		Description: `Print version`,
 
+	// version command
+	VersionConfig := &Command{
+		Name:                  "version",
+		Description:           `Print version`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
-		//test in run
 		Run: func() error {
 			fmt.Printf("Version %s \n", versionConfig.Version)
 			return nil
 		},
 	}
 
-	//TEST
-	//init flaeg
+	// TEST
+	// init flaeg
 	flaeg := New(rootCmd, args)
-	//add custom parser to fleag
+	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
-	//add command Version
+	// add command Version
 	flaeg.AddCommand(VersionConfig)
 
-	//run test
+	// run test
 	if err := flaeg.Run(); err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 }
 
-//Test Commands feature with root and version commands
+// Test Commands feature with root and version commands
 func TestCommandVersionInitConfigNoDefaultRootCommandHelpFlag(t *testing.T) {
-	//INIT
-	//init root config
+	// INIT
 	rootConfig := newConfiguration()
-	//init root default pointers
 	rootDefaultPointers := newDefaultPointersConfiguration()
-	//init version config
 	versionConfig := &VersionConfig{"0.1"}
-
-	//init args
 	args := []string{
 		"--help",
 	}
 
-	//init commands
-	//root command
+	// root command
 	rootCmd := &Command{
 		Name: "flaegtest",
 		Description: `flaegtest is a test program made to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
-
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
-		//test in run
 		Run: func() error {
 			fmt.Printf("Run with config :\n%+v\n", rootConfig)
 			//CHECK
@@ -2281,31 +2284,31 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
 			if !reflect.DeepEqual(rootConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				msg := fmt.Sprintf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				return errors.New(msg)
 			}
 			return nil
 		},
 	}
-	//vesion command
-	VersionConfig := &Command{
-		Name:        "version",
-		Description: `Print version`,
 
+	// version command
+	VersionConfig := &Command{
+		Name:                  "version",
+		Description:           `Print version`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
-		//test in run
 		Run: func() error {
 			fmt.Printf("Version %s \n", versionConfig.Version)
 			return nil
 		},
 	}
 
-	//TEST
-	//init flaeg
+	// TEST
+	// init flaeg
 	flaeg := New(rootCmd, args)
-	//add custom parser to fleag
+	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
-	//add command Version
+	// add command Version
 	flaeg.AddCommand(VersionConfig)
 
 	// catch stdout
@@ -2313,39 +2316,36 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	//run test
+	// run test
 	if err := flaeg.Run(); err == nil || !strings.Contains(err.Error(), "help requested") {
-		t.Errorf("Expected Error :help requested got Error : %s", err)
+		t.Errorf("Expected Error :help requested got Error : %v", err)
 	}
 
 	// read and restore stdout
-	w.Close()
+	err := w.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = rescueStdout
 
 	if !strings.Contains(string(out), "flaegtest is a test program made to test flaeg library") {
-		t.Fatalf("Expexted root command help")
+		t.Errorf("Expexted root command help")
 	}
 }
 
-//Test Commands feature with root and version commands
+// Test Commands feature with root and version commands
 func TestCommandVersionUnknownCommand(t *testing.T) {
-	//INIT
-	//init root config
+	// INIT
 	rootConfig := newConfiguration()
-	//init root default pointers
 	rootDefaultPointers := newDefaultPointersConfiguration()
-	//init version config
 	versionConfig := &VersionConfig{"0.1"}
-
-	//init args
 	args := []string{
-		"unknowncommand", //call Command
+		"unknowncommand", // call Command
 		"-h",
 	}
 
-	//init commands
-	//root command
+	// root command
 	rootCmd := &Command{
 		Name: "flaegtest",
 		Description: `flaegtest is a test program made to to test flaeg library.
@@ -2353,9 +2353,9 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
-		//test in run
 		Run: func() error {
 			fmt.Printf("Run with config :\n%+v\n", rootConfig)
+
 			//CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
@@ -2364,19 +2364,19 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
 			if !reflect.DeepEqual(rootConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				msg := fmt.Sprintf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				return errors.New(msg)
 			}
 			return nil
 		},
 	}
-	//vesion command
-	VersionConfig := &Command{
-		Name:        "version",
-		Description: `Print version`,
 
+	// version command
+	VersionConfig := &Command{
+		Name:                  "version",
+		Description:           `Print version`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
-		//test in run
 		Run: func() error {
 			fmt.Printf("Version %s \n", versionConfig.Version)
 			return nil
@@ -2384,48 +2384,40 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		},
 	}
 
-	//TEST
-	//init flaeg
+	// TEST
+	// init flaeg
 	flaeg := New(rootCmd, args)
-	//add custom parser to fleag
+	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
-	//add command Version
+	// add command Version
 	flaeg.AddCommand(VersionConfig)
 
-	//run test
+	// run test
 	if err := flaeg.Run(); err == nil || (!strings.Contains(err.Error(), "not found") && !strings.Contains(err.Error(), "Command")) {
 		t.Errorf("Expected Error :Command not found got Error : %s", err)
 	}
 }
 
 func TestParseCommandVersionInitConfigNoDefaultAllFlag(t *testing.T) {
-	//INIT
-	//init root config
+	// INIT
 	rootConfig := newConfiguration()
-	//init root default pointers
 	rootDefaultPointers := newDefaultPointersConfiguration()
-	//init version config
 	versionConfig := &VersionConfig{"0.1"}
-
-	//init args
 	args := []string{
-		// "--toto",  //it now has effect
-		"version", //call Command
+		"version", // call Command
 		"-v2.2beta",
 	}
 
-	//init commands
-	//root command
+	// root command
 	rootCmd := &Command{
 		Name: "flaegtest",
 		Description: `flaegtest is a test program made to to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
-
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
-		//test in run
 		Run: func() error {
 			fmt.Printf("Run with config :\n%+v\n", rootConfig)
+
 			//CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
@@ -2434,21 +2426,22 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
 
 			if !reflect.DeepEqual(rootConfig, check) {
-				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				msg := fmt.Sprintf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+				return errors.New(msg)
 			}
 			return nil
 		},
 	}
-	//vesion command
-	VersionCmd := &Command{
-		Name:        "version",
-		Description: `Print version`,
 
+	// version command
+	VersionCmd := &Command{
+		Name:                  "version",
+		Description:           `Print version`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
-		//test in run
 		Run: func() error {
 			fmt.Printf("Version %s \n", versionConfig.Version)
+
 			//CHECK
 			if versionConfig.Version != "2.2beta" {
 				return fmt.Errorf("expected 2.2beta got %s", versionConfig.Version)
@@ -2458,40 +2451,41 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		},
 	}
 
-	//TEST
-	//init flaeg
+	// TEST
+	// init flaeg
 	flaeg := New(rootCmd, args)
-	//add custom parser to fleag
+	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
-	//add command Version
+	// add command Version
 	flaeg.AddCommand(VersionCmd)
 
-	//run test
+	// run test
 	cmd, err := flaeg.GetCommand()
 	if err != nil {
-		t.Fatalf("Error %s", err.Error())
-	}
-	result, err := flaeg.Parse(cmd)
-	if err != nil {
-		t.Fatalf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
-	//check
+	result, err := flaeg.Parse(cmd)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check
 	check := &VersionConfig{"2.2beta"}
 
 	if !reflect.DeepEqual(result.Config, check) {
-		t.Fatalf("\nexpected \t%+v \ngot \t\t%+v\n", check, result.Config)
+		t.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, result.Config)
 	}
-
 }
 
 func TestSetPointersNilEmptyConfig(t *testing.T) {
-	//run test
+	// run test
 	config := &Configuration{}
 	objVal := reflect.ValueOf(config)
+
 	nilPointersConfig, err := setPointersNil(objVal)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
 
 	check := &Configuration{}
@@ -2504,12 +2498,14 @@ func TestSetPointersNilEmptyConfig(t *testing.T) {
 }
 
 func TestSetPointersNilDefaultPointersConfig(t *testing.T) {
-	//run test
+	// run test
 	objVal := reflect.ValueOf(newDefaultPointersConfiguration())
+
 	nilPointersConfig, err := setPointersNil(objVal)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
+
 	check := &Configuration{}
 	if !reflect.DeepEqual(nilPointersConfig.Interface(), check) {
 		t.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, nilPointersConfig.Interface())
@@ -2520,7 +2516,7 @@ func TestSetPointersNilDefaultPointersConfig(t *testing.T) {
 }
 
 func TestSetPointersNilFullConfig(t *testing.T) {
-	//init
+	// init
 	dob, _ := time.Parse(time.RFC3339, "1968-05-01T07:32:00Z")
 	config := &Configuration{
 		Name:     "Toto",
@@ -2541,12 +2537,14 @@ func TestSetPointersNilFullConfig(t *testing.T) {
 		},
 	}
 	objVal := reflect.ValueOf(config)
-	//run test
+
+	// run test
 	nilPointersConfig, err := setPointersNil(objVal)
 	if err != nil {
-		t.Errorf("Error %s", err.Error())
+		t.Fatal(err)
 	}
-	//check
+
+	// check
 	check := &Configuration{
 		Name:     "Toto",
 		LogLevel: "Tata",
@@ -2555,6 +2553,7 @@ func TestSetPointersNilFullConfig(t *testing.T) {
 	if !reflect.DeepEqual(nilPointersConfig.Interface(), check) {
 		t.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, nilPointersConfig.Interface())
 	}
+
 	checkInit := &Configuration{
 		Name:     "Toto",
 		LogLevel: "Tata",
@@ -2573,11 +2572,12 @@ func TestSetPointersNilFullConfig(t *testing.T) {
 			DateOfBirth: dob,
 		},
 	}
-	//cast
+	// cast
 	initConfig, ok := objVal.Interface().(*Configuration)
 	if !ok {
 		t.Errorf("Cannot convert the config into Configuration")
 	}
+
 	if !reflect.DeepEqual(initConfig, checkInit) {
 		fmt.Printf("expected \t%+v \ngot \t\t%+v\n", checkInit.Db, config.Db)
 		fmt.Printf("expected \t%+v \ngot \t\t%+v\n", checkInit.Owner, config.Owner)
@@ -2597,29 +2597,32 @@ type SubSubConfig struct {
 }
 
 func TestGetDefaultValueUnexportedFieldUnderPointer(t *testing.T) {
-	//init
+	// init
 	config := &ConfigPointerField{}
 	defaultPointersConfig := &ConfigPointerField{
 		PtrSubConfig: &SubConfigWithUnexportedField{
 			Exported: "ExportedSubFieldDefault",
 		},
 	}
-	defaultValmap := make(map[string]reflect.Value)
-	//TEST
-	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defaultPointersConfig), defaultValmap, ""); err != nil {
-		t.Errorf("Error %s", err.Error())
+	defaultValMap := make(map[string]reflect.Value)
+
+	// TEST
+	if err := getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(defaultPointersConfig), defaultValMap, ""); err != nil {
+		t.Fatal(err)
 	}
-	//check
+
+	// check
 	checkValue := map[string]reflect.Value{
 		"ptrsubconfig":          reflect.ValueOf(&SubConfigWithUnexportedField{"ExportedSubFieldDefault", nil}),
 		"ptrsubconfig.exported": reflect.ValueOf("ExportedSubFieldDefault"),
 	}
-	if len(checkValue) != len(defaultValmap) {
-		t.Fatalf("Error, expected %d elements in defaultValmap got %d", len(checkValue), len(defaultValmap))
+	if len(checkValue) != len(defaultValMap) {
+		t.Errorf("expected %d elements in defaultValMap got %d", len(checkValue), len(defaultValMap))
 	}
-	for flag, val := range defaultValmap {
+
+	for flag, val := range defaultValMap {
 		if !reflect.DeepEqual(checkValue[flag].Interface(), val.Interface()) {
-			t.Fatalf("Error flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], val)
+			t.Errorf("flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], val)
 		}
 	}
 }
@@ -2631,11 +2634,13 @@ type ConfigWithUnexportedField struct {
 
 func TestGetTypesUnexported(t *testing.T) {
 	config := &ConfigWithUnexportedField{}
-	flagmap := make(map[string]reflect.StructField)
-	err := getTypesRecursive(reflect.ValueOf(config), flagmap, "")
-	checkErr := "Field other is an unexported field"
+	flagMap := make(map[string]reflect.StructField)
+
+	err := getTypesRecursive(reflect.ValueOf(config), flagMap, "")
+
+	checkErr := "field other is an unexported field"
 	if err == nil || !strings.Contains(err.Error(), checkErr) {
-		t.Errorf("Expected error %s\ngot %s", checkErr, err)
+		t.Errorf("expected error '%v' got '%v'", checkErr, err)
 	}
 }
 
@@ -2706,20 +2711,20 @@ func TestArgsToLower(t *testing.T) {
 
 func TestSplitArgs(t *testing.T) {
 	inSlice := [][]string{
-		[]string{""},
-		[]string{"-a"},
-		[]string{"--arg=toto", "-atata"},
-		[]string{"cmd"},
-		[]string{"cmd", "-a"},
-		[]string{"cmd", "--arg=toto", "-atata"},
+		{""},
+		{"-a"},
+		{"--arg=toto", "-atata"},
+		{"cmd"},
+		{"cmd", "-a"},
+		{"cmd", "--arg=toto", "-atata"},
 	}
 	checkSlice := [][]string{
-		[]string{"", ""},
-		[]string{"", "-a"},
-		[]string{"", "--arg=toto", "-atata"},
-		[]string{"cmd"},
-		[]string{"cmd", "-a"},
-		[]string{"cmd", "--arg=toto", "-atata"},
+		{"", ""},
+		{"", "-a"},
+		{"", "--arg=toto", "-atata"},
+		{"cmd"},
+		{"cmd", "-a"},
+		{"cmd", "--arg=toto", "-atata"},
 	}
 	for i, in := range inSlice {
 		cmd, args := splitArgs(in)
@@ -2733,39 +2738,54 @@ func TestSplitArgs(t *testing.T) {
 }
 
 func TestTypoPrintHelp(t *testing.T) {
-	//init
+	// init
 	config := &struct {
 		ShortDescription                                                     string `description:"shortDescription"`
 		LoooooooooooooooooooooooooooooooooooooongFieldNameAndLongDescription string `description:"LoooooooooooooooooooooooooooooooooooooongFieldNameAndLongDescription has a very looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong description"`
 		Sh                                                                   string `description:"short"`
 	}{}
-	flagmap := make(map[string]reflect.StructField)
-	err := getTypesRecursive(reflect.ValueOf(config), flagmap, "")
+
+	flagMap := make(map[string]reflect.StructField)
+
+	err := getTypesRecursive(reflect.ValueOf(config), flagMap, "")
 	if err != nil {
-		t.Fatalf("Error, %s", err.Error())
+		t.Fatal(err)
 	}
+
 	var stringParser parse.StringValue
 	parsers := map[reflect.Type]parse.Parser{
 		reflect.TypeOf(""): &stringParser,
 	}
-	defaultValmap := map[string]reflect.Value{}
-	getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(config), defaultValmap, "")
+	defaultValMap := map[string]reflect.Value{}
+
+	err = getDefaultValue(reflect.ValueOf(config), reflect.ValueOf(config), defaultValMap, "")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// catch stdout
 	rescueStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
-	//test
-	PrintHelp(flagmap, defaultValmap, parsers)
+
+	// test
+	err = PrintHelp(flagMap, defaultValMap, parsers)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// read and restore stdout
-	w.Close()
+	err = w.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = rescueStdout
-	//check
+	// check
 	const listFlagCheck = `LoooooooooooooooooooooooooooooooooooooongFieldNameAndLongDescription has a very looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong description`
 
 	if strings.Contains(string(out), listFlagCheck) {
-		t.Fatalf("Expexted help description splitted on many line")
+		t.Errorf("Expexted help description splitted on many line")
 	}
 }
