@@ -192,10 +192,27 @@ func (d *Duration) SetValue(val interface{}) {
 	*d = val.(Duration)
 }
 
+// MarshalText serialize the given duration value into a text.
+func (d *Duration) MarshalText() ([]byte, error) {
+	return []byte(d.String()), nil
+}
+
 // UnmarshalText deserializes the given text into a duration value.
 // It is meant to support TOML decoding of durations.
 func (d *Duration) UnmarshalText(text []byte) error {
 	return d.Set(string(text))
+}
+
+// UnmarshalJSON deserializes the given text into a duration value.
+func (d *Duration) UnmarshalJSON(text []byte) error {
+	if v, err := strconv.Atoi(string(text)); err == nil {
+		*d = Duration(time.Duration(v))
+		return nil
+	}
+
+	v, err := time.ParseDuration(string(text))
+	*d = Duration(v)
+	return err
 }
 
 // TimeValue time.Time Value
