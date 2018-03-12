@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+	"encoding/json"
+	"strings"
 )
 
 func TestSliceStringsSet(t *testing.T) {
@@ -301,7 +303,7 @@ func TestUnmarshalJsonDuration(t *testing.T) {
 		},
 		{
 			desc:     "with units",
-			value:    "1m10s",
+			value:    "\"1m10s\"",
 			expected: time.Duration(70000000000),
 		},
 	}
@@ -348,5 +350,48 @@ func TestUnmarshalJsonDurationError(t *testing.T) {
 				t.Errorf("want error got nil")
 			}
 		})
+	}
+}
+
+type Object struct {
+	Timeout Duration
+}
+
+func TestJsonMarshal(t *testing.T) {
+	pointer := &Object{
+		Timeout: Duration(666 * time.Second),
+	}
+
+	bytes, err := json.Marshal(pointer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(bytes), "666000000000") {
+		t.Fatalf("Marshal fail: %s", bytes)
+	}
+
+	object := Object{
+		Timeout: Duration(666 * time.Second),
+	}
+
+	bytes, err = json.Marshal(object)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(bytes), "666000000000") {
+		t.Fatalf("Marshal fail: %s", bytes)
+	}
+}
+
+func TestJsonUnmarshal(t *testing.T) {
+	pointer := Object{
+	}
+
+	err := json.Unmarshal([]byte(`{"Timeout": "10s"}`), &pointer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pointer.Timeout != 10000000000 {
+		t.Fatalf("Wrong value: %d instead of 10000000000", pointer.Timeout)
 	}
 }
