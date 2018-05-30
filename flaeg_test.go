@@ -1961,7 +1961,7 @@ func TestFlaegCommandRootInitConfigAllDefaultSomeFlag(t *testing.T) {
 	// init command
 	rootCmd := &Command{
 		Name: "flaegtest",
-		Description: `flaegtest is a test program made to to test flaeg library.
+		Description: `flaegtest is a test program made to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                config,
 		DefaultPointersConfig: defaultPointers,
@@ -2012,7 +2012,7 @@ func TestCommandVersionInitConfigNoDefaultNoFlag(t *testing.T) {
 	// root command
 	rootCmd := &Command{
 		Name: "flaegtest",
-		Description: `flaegtest is a test program made to to test flaeg library.
+		Description: `flaegtest is a test program made to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
@@ -2077,7 +2077,7 @@ func TestCommandVersionInitConfigNoDefaultAllFlag(t *testing.T) {
 	// root command
 	rootCmd := &Command{
 		Name: "flaegtest",
-		Description: `flaegtest is a test program made to to test flaeg library.
+		Description: `flaegtest is a test program made to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
@@ -2141,7 +2141,7 @@ func TestCommandVersionInitConfigNoDefaultCommandHelpFlag(t *testing.T) {
 	// root command
 	rootCmd := &Command{
 		Name: "flaegtest",
-		Description: `flaegtest is a test program made to to test flaeg library.
+		Description: `flaegtest is a test program made to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
@@ -2215,7 +2215,7 @@ func TestSeveralCommandsDashArg(t *testing.T) {
 	// root command
 	rootCmd := &Command{
 		Name: "flaegtest",
-		Description: `flaegtest is a test program made to to test flaeg library.
+		Description: `flaegtest is a test program made to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
@@ -2348,7 +2348,7 @@ func TestCommandVersionUnknownCommand(t *testing.T) {
 	// root command
 	rootCmd := &Command{
 		Name: "flaegtest",
-		Description: `flaegtest is a test program made to to test flaeg library.
+		Description: `flaegtest is a test program made to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
 
 		Config:                rootConfig,
@@ -2411,7 +2411,7 @@ func TestParseCommandVersionInitConfigNoDefaultAllFlag(t *testing.T) {
 	// root command
 	rootCmd := &Command{
 		Name: "flaegtest",
-		Description: `flaegtest is a test program made to to test flaeg library.
+		Description: `flaegtest is a test program made to test flaeg library.
 Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                rootConfig,
 		DefaultPointersConfig: rootDefaultPointers,
