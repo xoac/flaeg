@@ -437,13 +437,16 @@ func PrintHelpWithCommand(flagMap map[string]reflect.StructField, defaultValMap 
 	// Using POSXE STD : http://pubs.opengroup.org/onlinepubs/9699919799/
 	const helper = `{{if .ProgDescription}}{{.ProgDescription}}
 
-{{end}}Usage: {{.ProgName}} [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
-   or: {{.ProgName}} [--flag[=true|false| ]] [-f[true|false| ]] ...     set true/false to boolean flag(s)
+{{end}}Usage: {{.ProgName}} [flags] <command> [<arguments>]
+
+Use "{{.ProgName}} <command> --help" for help on any command.
 {{if .SubCommands}}
-Available Commands:{{range $subCmdName, $subCmdDesc := .SubCommands}}
+Commands:{{range $subCmdName, $subCmdDesc := .SubCommands}}
 {{printf "\t%-50s %s" $subCmdName $subCmdDesc}}{{end}}
-Use "{{.ProgName}} [command] --help" for more information about a command.
 {{end}}
+Flag's usage: {{.ProgName}} [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
+          or: {{.ProgName}} [--flag[=true|false| ]] [-f[true|false| ]] ...     set true/false to boolean flag(s)
+
 Flags:
 `
 	// Use a struct to give data to template
