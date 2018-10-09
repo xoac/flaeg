@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/containous/flaeg/parse"
+	"github.com/ogier/pflag"
 )
 
 // ConfigurationWithRepeatedStruct is struct which contains repeated struct
@@ -45,7 +46,7 @@ type ServerInfo struct {
 	Load64 int64  `description:"Server load"`       // int64 type field, same description just to be sure it works
 }
 type DatabaseInfo struct {
-	ServerInfo             //Go through anonymous field
+	ServerInfo             // Go through anonymous field
 	ConnectionMax   uint   `long:"comax" description:"Number max of connections on database"` // uint type field, long flag "--comax"
 	ConnectionMax64 uint64 `description:"Number max of connections on database"`              // uint64 type field, same description just to be sure it works
 }
@@ -713,7 +714,7 @@ func TestParseArgsAll(t *testing.T) {
 	check["db.connectionmax64"] = &uint64Parser
 	check["owner"] = &boolParser
 	check["owner.name"] = &boolParser
-	timeParser.Set("2016-04-20T17:39:00Z")
+	_ = timeParser.Set("2016-04-20T17:39:00Z")
 	check["owner.dob"] = &timeParser
 	float64Parser.SetValue(0.222)
 	check["owner.rate"] = &float64Parser
@@ -770,7 +771,7 @@ func TestParseArgsErrorNoParser(t *testing.T) {
 
 	// check
 	if err != ErrParserNotFound {
-		t.Errorf("Expexted error '%v' got '%v'", ErrParserNotFound, err)
+		t.Errorf("Expected error '%v' got '%v'", ErrParserNotFound, err)
 	}
 
 	// check continue on error
@@ -873,7 +874,7 @@ func TestGetDefaultValueInitConfigNoDefault(t *testing.T) {
 		Timeout: parse.Duration(time.Millisecond),
 	}
 	defPointerConfig := &Configuration{
-		Db: nil, //If pointer field is nil, default value will be go default value
+		Db: nil, // If pointer field is nil, default value will be go default value
 		// Owner is not initialized, default value will be go default value
 	}
 	defaultValMap := make(map[string]reflect.Value)
@@ -1060,7 +1061,7 @@ func TestFillStructRecursiveNoConfigNoDefaultAllValmap(t *testing.T) {
 	valMap["db.connectionmax64"] = &uint64Parser
 	valMap["owner"] = &boolParser
 	valMap["owner.name"] = &boolParser
-	timeParser.Set("2016-04-20T17:39:00Z")
+	_ = timeParser.Set("2016-04-20T17:39:00Z")
 	valMap["owner.dob"] = &timeParser
 	float64Parser.SetValue(0.222)
 	valMap["owner.rate"] = &float64Parser
@@ -1446,7 +1447,7 @@ func TestFillStructRecursiveNoConfigAllDefaultSomeValmap(t *testing.T) {
 	valMap["timeout"] = &durationParser
 	boolParser.SetValue(true)
 	valMap["db"] = &boolParser
-	timeParser.Set("2016-04-20T17:39:00Z")
+	_ = timeParser.Set("2016-04-20T17:39:00Z")
 	valMap["owner.dob"] = &timeParser
 	float64Parser.SetValue(0.222)
 	valMap["owner.rate"] = &float64Parser
@@ -1736,14 +1737,17 @@ func TestLoadInitConfigAllDefaultSomeFlagErrorParser(t *testing.T) {
 	}
 
 	// catch stdout
-	rescueStdout := os.Stdout
+	backupStdout := os.Stdout
+	defer func() {
+		os.Stdout = backupStdout
+	}()
 	_, w, _ := os.Pipe()
 	os.Stdout = w
 
 	// TEST
 	err := Load(config, defaultPointers, args)
 	if err != ErrParserNotFound {
-		t.Errorf("Expexted error %s\ngot %s", ErrParserNotFound, err)
+		t.Errorf("Expected error %s\ngot %s", ErrParserNotFound, err)
 	}
 
 	// read and restore stdout
@@ -1752,7 +1756,7 @@ func TestLoadInitConfigAllDefaultSomeFlagErrorParser(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Stdout = rescueStdout
+	os.Stdout = backupStdout
 
 	// check continue on error
 	check := newConfiguration()
@@ -1917,7 +1921,10 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 	}
 
 	// catch stdout
-	rescueStdout := os.Stdout
+	backupStdout := os.Stdout
+	defer func() {
+		os.Stdout = backupStdout
+	}()
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
@@ -1925,7 +1932,7 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 	checkErr := "invalid argument"
 	_, err := parseArgs(args, flagMap, parsers)
 	if err != nil && strings.Contains(err.Error(), checkErr) {
-		PrintError(err, flagMap, defaultValMap, parsers)
+		_ = PrintError(err, flagMap, defaultValMap, parsers)
 	} else {
 		t.Errorf("Expected Error : invalid argument got Error : %s", err)
 	}
@@ -1936,12 +1943,15 @@ func TestPrintErrorInvalidArgument(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = rescueStdout
+	out, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = backupStdout
 
 	// check
 	if !strings.Contains(string(out), checkErr) {
-		t.Errorf("Expexted error %s\ngot %s", checkErr, out)
+		t.Errorf("Expected error %s\ngot %s", checkErr, out)
 	}
 }
 
@@ -1966,7 +1976,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Config:                config,
 		DefaultPointersConfig: defaultPointers,
 		Run: func() error {
-			//CHECK
+			// CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
 			check.Db = newDefaultPointersConfiguration().Db
@@ -2018,7 +2028,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		DefaultPointersConfig: rootDefaultPointers,
 		Run: func() error {
 			fmt.Printf("Run with config :\n%+v\n", rootConfig)
-			//CHECK
+			// CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
 			check.Db = newDefaultPointersConfiguration().Db
@@ -2034,13 +2044,13 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	}
 
 	// version command
-	VersionConfig := &Command{
+	versionCmd := &Command{
 		Name:                  "version",
 		Description:           `Print version`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
 		Run: func() error {
-			//CHECK
+			// CHECK
 			if versionConfig.Version != "0.1" {
 				return fmt.Errorf("expected 0.1 got %s", versionConfig.Version)
 			}
@@ -2054,7 +2064,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
 	// add command Version
-	flaeg.AddCommand(VersionConfig)
+	flaeg.AddCommand(versionCmd)
 
 	// run test
 	if err := flaeg.Run(); err != nil {
@@ -2083,7 +2093,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		DefaultPointersConfig: rootDefaultPointers,
 		Run: func() error {
 			fmt.Printf("Run with config :\n%+v\n", rootConfig)
-			//CHECK
+			// CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
 			check.Db = newDefaultPointersConfiguration().Db
@@ -2099,13 +2109,13 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	}
 
 	// version command
-	VersionConfig := &Command{
+	versionCmd := &Command{
 		Name:                  "version",
 		Description:           `Print version`,
 		Config:                versionConfig,
 		DefaultPointersConfig: versionConfig,
 		Run: func() error {
-			//CHECK
+			// CHECK
 			if versionConfig.Version != "2.2beta" {
 				return fmt.Errorf("expected 2.2beta got %s", versionConfig.Version)
 			}
@@ -2119,7 +2129,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
 	// add command Version
-	flaeg.AddCommand(VersionConfig)
+	flaeg.AddCommand(versionCmd)
 
 	// run test
 	if err := flaeg.Run(); err != nil {
@@ -2148,7 +2158,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Run: func() error {
 			fmt.Printf("Run with config :\n%+v\n", rootConfig)
 
-			//CHECK
+			// CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
 			check.Db = newDefaultPointersConfiguration().Db
@@ -2164,7 +2174,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	}
 
 	// version command
-	VersionConfig := &Command{
+	versionCmd := &Command{
 		Name:                  "version",
 		Description:           `Print version`,
 		Config:                versionConfig,
@@ -2181,16 +2191,18 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
 	// add command Version
-	flaeg.AddCommand(VersionConfig)
+	flaeg.AddCommand(versionCmd)
 
 	// catch stdout
-	rescueStdout := os.Stdout
+	backupStdout := os.Stdout
+	defer func() {
+		os.Stdout = backupStdout
+	}()
 	_, w, _ := os.Pipe()
 	os.Stdout = w
 
-	checkErr := "help requested"
 	// run test
-	if err := flaeg.Run(); err == nil || !strings.Contains(err.Error(), checkErr) {
+	if err := flaeg.Run(); err == nil || err != pflag.ErrHelp {
 		t.Errorf("Expected Error :help requested got Error : %v", err)
 	}
 
@@ -2199,7 +2211,6 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	if err != nil {
 		t.Fatal(err)
 	}
-	os.Stdout = rescueStdout
 }
 
 // Test Commands feature with root and version commands
@@ -2209,7 +2220,7 @@ func TestSeveralCommandsDashArg(t *testing.T) {
 	rootDefaultPointers := newDefaultPointersConfiguration()
 	versionConfig := &VersionConfig{"0.1"}
 	args := []string{
-		"-", //dash arg
+		"-", // dash arg
 	}
 
 	// root command
@@ -2232,7 +2243,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	}
 
 	// version command
-	VersionConfig := &Command{
+	versionCmd := &Command{
 		Name:                  "version",
 		Description:           `Print version`,
 		Config:                versionConfig,
@@ -2249,7 +2260,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
 	// add command Version
-	flaeg.AddCommand(VersionConfig)
+	flaeg.AddCommand(versionCmd)
 
 	// run test
 	if err := flaeg.Run(); err != nil {
@@ -2276,7 +2287,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		DefaultPointersConfig: rootDefaultPointers,
 		Run: func() error {
 			fmt.Printf("Run with config :\n%+v\n", rootConfig)
-			//CHECK
+			// CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
 			check.Db = newDefaultPointersConfiguration().Db
@@ -2292,7 +2303,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	}
 
 	// version command
-	VersionConfig := &Command{
+	versionCmd := &Command{
 		Name:                  "version",
 		Description:           `Print version`,
 		Config:                versionConfig,
@@ -2309,15 +2320,18 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
 	// add command Version
-	flaeg.AddCommand(VersionConfig)
+	flaeg.AddCommand(versionCmd)
 
 	// catch stdout
-	rescueStdout := os.Stdout
+	backupStdout := os.Stdout
+	defer func() {
+		os.Stdout = backupStdout
+	}()
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	// run test
-	if err := flaeg.Run(); err == nil || !strings.Contains(err.Error(), "help requested") {
+	if err := flaeg.Run(); err == nil || err != pflag.ErrHelp {
 		t.Errorf("Expected Error :help requested got Error : %v", err)
 	}
 
@@ -2326,11 +2340,91 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = rescueStdout
 
-	if !strings.Contains(string(out), "flaegtest is a test program made to test flaeg library") {
-		t.Errorf("Expexted root command help")
+	out, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	os.Stdout = backupStdout
+
+	if !strings.Contains(string(out), "flaegtest is a test program made to test flaeg library.") {
+		t.Errorf("Expected root command help")
+	}
+}
+
+func TestCommandHidden(t *testing.T) {
+	// INIT
+	rootConfig := newConfiguration()
+	rootDefaultPointers := newDefaultPointersConfiguration()
+	args := []string{
+		"--help",
+	}
+
+	// root command
+	rootCmd := &Command{
+		Name: "flaegtest",
+		Description: `flaegtest is a test program made to test flaeg library.
+Complete documentation is available at https://github.com/containous/flaeg`,
+		Config:                rootConfig,
+		DefaultPointersConfig: rootDefaultPointers,
+		Run: func() error {
+			return nil
+		},
+	}
+
+	// hidden command
+	hiddenDescription := "The Hidden command"
+	versionConfig := &VersionConfig{Version: "0.1"}
+	secretCmd := &Command{
+		Name:                  "secret",
+		Description:           hiddenDescription,
+		Config:                versionConfig,
+		DefaultPointersConfig: versionConfig,
+		HideHelp:              true,
+		Run: func() error {
+			return nil
+		},
+	}
+
+	// TEST
+	// init flaeg
+	flaeg := New(rootCmd, args)
+	// add custom parser to flaeg
+	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	// add command Version
+	flaeg.AddCommand(secretCmd)
+
+	// catch stdout
+	backupStdout := os.Stdout
+	defer func() {
+		os.Stdout = backupStdout
+	}()
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	// run test
+	if err := flaeg.Run(); err == nil || err != pflag.ErrHelp {
+		t.Errorf("Expected Error :help requested got Error : %v", err)
+	}
+
+	// read and restore stdout
+	err := w.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	os.Stdout = backupStdout
+
+	output := string(out)
+	fmt.Println(output)
+
+	if strings.Contains(output, hiddenDescription) {
+		t.Errorf("The command must be hidden is th console: %s", output)
 	}
 }
 
@@ -2356,7 +2450,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Run: func() error {
 			fmt.Printf("Run with config :\n%+v\n", rootConfig)
 
-			//CHECK
+			// CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
 			check.Db = newDefaultPointersConfiguration().Db
@@ -2372,7 +2466,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	}
 
 	// version command
-	VersionConfig := &Command{
+	versionCmd := &Command{
 		Name:                  "version",
 		Description:           `Print version`,
 		Config:                versionConfig,
@@ -2390,7 +2484,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	// add custom parser to flaeg
 	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
 	// add command Version
-	flaeg.AddCommand(VersionConfig)
+	flaeg.AddCommand(versionCmd)
 
 	// run test
 	if err := flaeg.Run(); err == nil || (!strings.Contains(err.Error(), "not found") && !strings.Contains(err.Error(), "Command")) {
@@ -2418,7 +2512,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Run: func() error {
 			fmt.Printf("Run with config :\n%+v\n", rootConfig)
 
-			//CHECK
+			// CHECK
 			check := newConfiguration()
 			check.LogLevel = "INFO"
 			check.Db = newDefaultPointersConfiguration().Db
@@ -2442,7 +2536,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 		Run: func() error {
 			fmt.Printf("Version %s \n", versionConfig.Version)
 
-			//CHECK
+			// CHECK
 			if versionConfig.Version != "2.2beta" {
 				return fmt.Errorf("expected 2.2beta got %s", versionConfig.Version)
 			}
@@ -2764,7 +2858,10 @@ func TestTypoPrintHelp(t *testing.T) {
 	}
 
 	// catch stdout
-	rescueStdout := os.Stdout
+	backupStdout := os.Stdout
+	defer func() {
+		os.Stdout = backupStdout
+	}()
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
@@ -2780,12 +2877,16 @@ func TestTypoPrintHelp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = rescueStdout
+	out, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = backupStdout
+
 	// check
 	const listFlagCheck = `LoooooooooooooooooooooooooooooooooooooongFieldNameAndLongDescription has a very looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong description`
 
 	if strings.Contains(string(out), listFlagCheck) {
-		t.Errorf("Expexted help description splitted on many line")
+		t.Errorf("Expected help description splitted on many line")
 	}
 }

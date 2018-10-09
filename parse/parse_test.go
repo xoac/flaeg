@@ -1,11 +1,11 @@
 package parse
 
 import (
+	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
-	"encoding/json"
-	"strings"
 )
 
 func TestSliceStringsSet(t *testing.T) {
@@ -384,8 +384,7 @@ func TestJsonMarshal(t *testing.T) {
 }
 
 func TestJsonUnmarshal(t *testing.T) {
-	pointer := Object{
-	}
+	pointer := Object{}
 
 	err := json.Unmarshal([]byte(`{"Timeout": "10s"}`), &pointer)
 	if err != nil {
