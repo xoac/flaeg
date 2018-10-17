@@ -2355,6 +2355,66 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 
 func TestCommandHidden(t *testing.T) {
 	// INIT
+	args := []string{
+		"--help",
+	}
+
+	// hidden root command
+	hiddenDescription := "The Hidden root command"
+	versionConfig := &VersionConfig{Version: "0.1"}
+	rootCmd := &Command{
+		Name:                  "secret",
+		Description:           hiddenDescription,
+		Config:                versionConfig,
+		DefaultPointersConfig: versionConfig,
+		HideHelp:              true,
+		Run: func() error {
+			return nil
+		},
+	}
+
+	// TEST
+	// init flaeg
+	flaeg := New(rootCmd, args)
+	// add custom parser to flaeg
+	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+
+	// catch stdout
+	backupStdout := os.Stdout
+	defer func() {
+		os.Stdout = backupStdout
+	}()
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	// run test
+	expectedErrMessage := "command secret not found"
+	if err := flaeg.Run(); err == nil || err.Error() != expectedErrMessage {
+		t.Errorf("Expected Error: %q , actual: %v", expectedErrMessage, err)
+	}
+
+	// read and restore stdout
+	err := w.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	os.Stdout = backupStdout
+
+	output := string(out)
+	fmt.Println(output)
+
+	if strings.Contains(output, hiddenDescription) {
+		t.Errorf("The command must be hidden in the console: %s", output)
+	}
+}
+
+func TestSubCommandHidden(t *testing.T) {
+	// INIT
 	rootConfig := newConfiguration()
 	rootDefaultPointers := newDefaultPointersConfiguration()
 	args := []string{
@@ -2424,7 +2484,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	fmt.Println(output)
 
 	if strings.Contains(output, hiddenDescription) {
-		t.Errorf("The command must be hidden is th console: %s", output)
+		t.Errorf("The command must be hidden in the console: %s", output)
 	}
 }
 
