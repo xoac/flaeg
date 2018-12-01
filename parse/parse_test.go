@@ -302,6 +302,12 @@ func TestUnmarshalJsonDuration(t *testing.T) {
 			expected: time.Duration(1000000000),
 		},
 		{
+			desc:     "10 seconds",
+			value:    "10000000000",
+			expected: time.Duration(10000000000),
+		},
+		{
+
 			desc:     "with units",
 			value:    "\"1m10s\"",
 			expected: time.Duration(70000000000),
