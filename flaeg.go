@@ -237,11 +237,12 @@ func getDefaultValue(defaultValue reflect.Value, defaultPointersValue reflect.Va
 
 // objValue a reflect.Value of a not-nil pointer on a struct
 func setPointersNil(objValue reflect.Value) (reflect.Value, error) {
-	if objValue.Kind() != reflect.Ptr {
+	switch {
+	case objValue.Kind() != reflect.Ptr:
 		return objValue, fmt.Errorf("parameters objValue must be a not-nil pointer on a struct, not a %s", objValue.Kind())
-	} else if objValue.IsNil() {
+	case objValue.IsNil():
 		return objValue, errors.New("parameters objValue must be a not-nil pointer")
-	} else if objValue.Elem().Kind() != reflect.Struct {
+	case objValue.Elem().Kind() != reflect.Struct:
 		// fmt.Printf("Parameters objValue must be a not-nil pointer on a struct, not a pointer on a %s\n", objValue.Elem().Kind().String())
 		return objValue, nil
 	}
@@ -362,7 +363,7 @@ func PrintError(err error, flagMap map[string]reflect.StructField, defaultValmap
 		fmt.Printf("Error: %s\n", err)
 	}
 	if !strings.Contains(err.Error(), ":No parser for type") {
-		PrintHelp(flagMap, defaultValmap, parsers)
+		_ = PrintHelp(flagMap, defaultValmap, parsers)
 	}
 	return err
 }
