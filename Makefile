@@ -1,6 +1,5 @@
-.PHONY: all
+.PHONY: clean dependencies checks test build fmt
 
-GOFILES := $(shell go list -f '{{range $$index, $$element := .GoFiles}}{{$$.Dir}}/{{$$element}}{{"\n"}}{{end}}' ./... | grep -v '/vendor/')
 SRCS = $(shell git ls-files '*.go' | grep -v '^vendor/')
 
 default: clean checks test build
@@ -15,14 +14,12 @@ clean:
 	rm -f cover.out
 
 build:
-	go build
+	GOOS=darwin go build;
+	GOOS=windows go build;
+	GOOS=linux go build;
 
-checks: check-fmt
+checks:
 	golangci-lint run
 
-check-fmt: SHELL := /bin/bash
-check-fmt:
-	diff -u <(echo -n) <(gofmt -d $(GOFILES))
-
 fmt:
-	gofmt -s -l -w $(SRCS)
+	@gofmt -s -l -w $(SRCS)
