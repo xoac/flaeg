@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net"
 	"reflect"
 	"strconv"
 	"strings"
@@ -273,6 +274,30 @@ func (s *SliceStrings) SetValue(val interface{}) {
 	*s = SliceStrings(val.([]string))
 }
 
+// TCPAddrValue parse net.TCPAddr
+type TCPAddrValue net.TCPAddr
+
+// Set sets net.TCPAddr value from the given string value.
+func (s *TCPAddrValue) Set(str string) error {
+	tcpADDR, err := net.ResolveTCPAddr("tcp", strings.TrimSpace(str))
+	if err != nil {
+		return fmt.Errorf("failed to parse TCPAddr: %q", s)
+	}
+	*s = TCPAddrValue(*tcpADDR)
+	return nil
+}
+
+// Get net.TCPAddr
+func (s *TCPAddrValue) Get() interface{} { return net.TCPAddr(*s) }
+
+// String return net.TCPAddr as string
+func (s *TCPAddrValue) String() string { return fmt.Sprintf("%v:%v", s.IP, s.Port) }
+
+// SetValue sets net.TCPAddr into the parser
+func (s *TCPAddrValue) SetValue(val interface{}) {
+	*s = TCPAddrValue(val.(net.TCPAddr))
+}
+
 // LoadParsers loads default parsers and custom parsers given as parameter.
 // Return a map [reflect.Type]parsers
 // bool, int, int64, uint, uint64, float64,
@@ -305,6 +330,9 @@ func LoadParsers(customParsers map[reflect.Type]Parser) (map[reflect.Type]Parser
 
 	var timeParser TimeValue
 	parsers[reflect.TypeOf(time.Now())] = &timeParser
+
+	var tcpAddrParser TCPAddrValue
+	parsers[reflect.TypeOf(net.TCPAddr{})] = &tcpAddrParser
 
 	for rType, parser := range customParsers {
 		parsers[rType] = parser

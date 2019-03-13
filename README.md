@@ -26,7 +26,8 @@ We developed `flaeg` and [`staert`](https://github.com/containous/staert) in ord
 	- type `string`
 	- type `float` (`float64`)
 	- type `time.Duration`
-    	- type `time.Time`
+	- type `time.Time`
+	- type `net.TCPAddr`
 - Many `Kind` of `StructField` in the Configuration structure are supported :
 	- Sub-Structure
 	- Anonymous field (on Sub-Structure)
